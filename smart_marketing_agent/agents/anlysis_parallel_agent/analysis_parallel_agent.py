@@ -10,6 +10,5 @@ analysis_parallel_agent = ParallelAgent(
         audience_agent,
         competitor_agent,
         trends_agent,
-
     ]
 )

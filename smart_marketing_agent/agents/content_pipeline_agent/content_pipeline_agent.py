@@ -13,6 +13,5 @@ content_pipeline_agent = SequentialAgent(
         content_agent,
         seo_agent,
         formatter_agent,   
-       # refinement_loop    #  يحسّن بشكل تكراري
     ]
 )
