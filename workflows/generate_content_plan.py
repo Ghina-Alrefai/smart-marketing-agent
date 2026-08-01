@@ -70,7 +70,6 @@ def run_content_generation_pipeline(
             "user_id": plan.user_id,
             "brand_id": plan.brand_id,
             "days": plan.days,
-            "platform": plan.platform,
             "campaign_goal": plan.campaign_goal or "زيادة المبيعات",
         }
 
@@ -94,7 +93,6 @@ def run_content_generation_pipeline(
         brand_guidelines=guidelines_str,
         user_id=plan_data["user_id"],
         days=plan_data["days"],
-        platform=plan_data["platform"],
         campaign_goal=plan_data["campaign_goal"],
     )
     if "error" in strategy:
@@ -133,7 +131,6 @@ def run_content_generation_pipeline(
                 post_type=post_type,
                 goal=goal,
                 content_angle=content_angle,
-                platform=plan_data["platform"],
                 must_use_words=", ".join(brand_info.get("must_use_words", [])),
                 forbidden_words=", ".join(brand_info.get("forbidden_words", [])),
                 preferred_cta=brand_info.get("preferred_cta", ""),
@@ -213,7 +210,7 @@ def run_content_generation_pipeline(
 
     final_status = "done" if not errors else "done_with_errors"
     update_plan_status(plan_id, final_status)
-    emit("✅ اكتمل التوليد!", total_days, total_days)
+    emit(" اكتمل التوليد!", total_days, total_days)
 
     return PipelineResult(
         success=True,

@@ -20,7 +20,6 @@ def get_brand(brand_id: int) -> dict[str, Any]:
             "forbidden_words": b.forbidden_words or [],
             "preferred_cta": b.preferred_cta,
             "preferred_content_types": b.preferred_content_types or [],
-            "platforms": b.platforms or [],
             "template_url": b.template_url or "",
         }
 

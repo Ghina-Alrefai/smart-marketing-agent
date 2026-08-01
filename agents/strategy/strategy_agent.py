@@ -14,7 +14,6 @@ def build_content_strategy(
     brand_guidelines: str,
     user_id: int,
     days: int,
-    platform: str,
     campaign_goal: str,
 ) -> dict:
     """
@@ -31,7 +30,6 @@ def build_content_strategy(
         brand_guidelines=brand_guidelines,
         products=products_text,
         days=days,
-        platform=platform,
         campaign_goal=campaign_goal,
     )
 

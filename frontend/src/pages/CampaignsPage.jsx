@@ -76,7 +76,7 @@ export default function CampaignsPage() {
               <Link key={plan.id} to={`/campaigns/${plan.id}`} className="card flex items-center justify-between hover:shadow-md transition-shadow group">
                 <div>
                   <p className="font-semibold text-gray-900">{plan.campaign_name || `حملة #${plan.id}`}</p>
-                  <p className="text-sm text-gray-400 mt-0.5">{plan.days} أيام · {plan.platform}</p>
+                  <p className="text-sm text-gray-400 mt-0.5">{plan.days} أيام</p>
                 </div>
                 <div className="flex items-center gap-3">
                   <span className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${statusInfo.color}`}>

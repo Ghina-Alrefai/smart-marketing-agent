@@ -68,10 +68,7 @@ GOOGLE_API_KEY=your_key_here
 
 للحصول على مفتاح: https://aistudio.google.com/app/apikey
 
-### 4. تشغيل الـ Backend
-
-```bash
-uvicorn main:app --reload --port 8000
+### 4. تشغيل الـ 
 ```
 
 API docs متاحة على: http://localhost:8000/docs

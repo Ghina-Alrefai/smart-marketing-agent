@@ -24,7 +24,6 @@ class BrandCreate(BaseModel):
     forbidden_words: list[str] = []
     preferred_cta: str | None = None
     preferred_content_types: list[str] = []
-    platforms: list[str] = ["facebook"]
 
 class BrandUpdate(BrandCreate):
     brand_name: str | None = None
@@ -65,7 +64,6 @@ class ContentPlanCreate(BaseModel):
     campaign_name: str | None = None
     start_date: datetime | None = None
     days: int = 7
-    platform: str = "facebook"
     campaign_goal: str | None = None
 
 class ContentPlanOut(ContentPlanCreate):

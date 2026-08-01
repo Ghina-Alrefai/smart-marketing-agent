@@ -4,6 +4,7 @@ import { Toaster } from 'react-hot-toast'
 
 import AppLayout from './components/AppLayout'
 import Dashboard from './pages/Dashboard'
+import ChatPage from './pages/ChatPage'
 import BrandPage from './pages/BrandPage'
 import ProductsPage from './pages/ProductsPage'
 import CampaignsPage from './pages/CampaignsPage'
@@ -21,6 +22,7 @@ const router = createBrowserRouter([
     element: <AppLayout />,
     children: [
       { index: true, element: <Dashboard /> },
+      { path: 'chat', element: <ChatPage /> },
       { path: 'brand', element: <BrandPage /> },
       { path: 'products', element: <ProductsPage /> },
       { path: 'campaigns', element: <CampaignsPage /> },

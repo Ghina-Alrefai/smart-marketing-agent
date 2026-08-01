@@ -31,7 +31,6 @@ export default function NewCampaignPage() {
     campaign_name: '',
     brand_id: '',
     days: 7,
-    platform: 'facebook',
     campaign_goal: '',
   })
 
@@ -73,13 +72,6 @@ export default function NewCampaignPage() {
             <label className="label">عدد الأيام</label>
             <select className="input" value={form.days} onChange={e => setForm(f => ({ ...f, days: parseInt(e.target.value) }))}>
               {[3, 5, 7, 10, 14, 30].map(d => <option key={d} value={d}>{d} أيام</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="label">المنصة</label>
-            <select className="input" value={form.platform} onChange={e => setForm(f => ({ ...f, platform: e.target.value }))}>
-              <option value="facebook">Facebook</option>
-              <option value="instagram">Instagram</option>
             </select>
           </div>
         </div>

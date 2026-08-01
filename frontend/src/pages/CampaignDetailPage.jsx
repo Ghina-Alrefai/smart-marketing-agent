@@ -62,7 +62,7 @@ export default function CampaignDetailPage() {
             <h1 className="text-2xl font-bold text-gray-900">
               {plan?.campaign_name || `حملة #${planId}`}
             </h1>
-            <p className="text-gray-500 mt-1">{plan?.days} أيام · {plan?.platform}</p>
+            <p className="text-gray-500 mt-1">{plan?.days} أيام</p>
           </div>
           <div className="flex items-center gap-3">
             {isGenerating && (

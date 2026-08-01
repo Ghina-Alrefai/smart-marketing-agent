@@ -19,7 +19,6 @@ const emptyForm = () => ({
   tone_of_voice:[], content_style:[], visual_style:[],
   brand_colors:'#6366f1', target_audience:'', language:'ar',
   must_use_words:'', forbidden_words:'', preferred_cta:'',
-  platforms:['facebook'],
 })
 
 function brandToForm(b) {
@@ -33,7 +32,7 @@ function brandToForm(b) {
     target_audience: b.target_audience||'', language: b.language||'ar',
     must_use_words: (b.must_use_words||[]).join(', '),
     forbidden_words: (b.forbidden_words||[]).join(', '),
-    preferred_cta: b.preferred_cta||'', platforms: b.platforms||['facebook'],
+    preferred_cta: b.preferred_cta||'',
   }
 }
 
@@ -201,18 +200,6 @@ export default function BrandPage() {
               </div>
             </div>
           ))}
-          <div>
-            <label className="label">المنصات</label>
-            <div className="flex gap-2">
-              {['facebook','instagram'].map(p=>(
-                <button key={p} type="button" onClick={()=>toggle('platforms',p)}
-                  className={`px-4 py-2 rounded-xl text-sm font-semibold border transition-all
-                    ${form.platforms.includes(p)?'bg-primary-600 text-white border-primary-600':'border-gray-200 text-gray-600'}`}>
-                  {p==='facebook'?'Facebook':'Instagram'}
-                </button>
-              ))}
-            </div>
-          </div>
         </Section>
 
         {/* Writing */}

@@ -40,7 +40,6 @@ class Brand(Base):
     forbidden_words         = Column(JSON, default=list)
     preferred_cta           = Column(String(200))
     preferred_content_types = Column(JSON, default=list)
-    platforms               = Column(JSON, default=list)
     created_at              = Column(DateTime, default=datetime.utcnow)
     updated_at              = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -84,7 +83,6 @@ class ContentPlan(Base):
     campaign_name = Column(String(200))
     start_date    = Column(DateTime)
     days          = Column(Integer, default=7)
-    platform      = Column(String(50), default="facebook")
     campaign_goal = Column(String(200))
     status        = Column(String(50), default="pending")
     created_at    = Column(DateTime, default=datetime.utcnow)

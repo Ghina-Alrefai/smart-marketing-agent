@@ -43,4 +43,7 @@ export const getPlanStatus    = (planId)        => api.get(`/plans/${planId}/sta
 export const listPosts        = (planId)        => api.get(`/plans/${planId}/posts`)
 export const approvePost      = (postId, approved) => api.patch(`/plans/posts/${postId}/approve`, { approved })
 
+// Chat (Orchestrator)
+export const sendChatMessage = (data) => api.post('/chat/message', data)
+
 export default api
