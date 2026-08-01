@@ -20,7 +20,6 @@ from evaluation.report import save_report
 
 # ── منشور تجريبي بنفس بنية مخرجات وكيلك ──────────────────────────────────────
 SAMPLE_POST = {
-    "platform": "facebook",
     "post_type": "promotional",
     "goal": "زيادة المبيعات",
     "hook": "صباحك أحلى مع قهوتنا المختصة ☕",

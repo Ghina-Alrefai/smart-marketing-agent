@@ -68,7 +68,7 @@ th{{background:#1d2138}} tr:hover td{{background:#1b2036}}
 .callout{{border-right:4px solid #fbbd23;background:#1c1a10;padding:12px 16px;border-radius:10px;font-size:14px}}
 .post p{{margin:6px 0}} .lbl{{color:#6c8bff;font-weight:700}}
 </style></head><body><div class="wrap">
-<h1>📊 تقرير تقييم منشور — المنصة: {_esc(post.get('platform','—'))}</h1>
+<h1>📊 تقرير تقييم منشور (فيسبوك)</h1>
 
 <div class="kpi">
   <div class="score">{pct}%</div>

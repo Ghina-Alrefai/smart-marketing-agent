@@ -28,7 +28,7 @@ DIMENSIONS: list[Dimension] = [
     # الطبقة A — جودة المخرَج (60)
     Dimension("brand_voice",  "توافق صوت البراند",      "A", 10, "judge"),
     Dimension("engagement",   "احتمالية التفاعل",        "A",  8, "judge"),
-    Dimension("platform",     "التكيّف مع المنصة",       "A",  8, "rule"),
+    Dimension("fb_fit",       "ملاءمة فيسبوك (طول/وسوم)", "A",  8, "rule"),
     Dimension("cta",          "الدعوة للتفاعل (CTA)",    "A",  7, "rule"),
     Dimension("clarity",      "الوضوح",                  "A",  7, "rule"),
     Dimension("tone",         "ملاءمة النبرة",           "A",  6, "judge"),
@@ -76,16 +76,5 @@ def band_for(pct: float) -> tuple[str, str]:
     return BANDS[-1][1], BANDS[-1][2]
 
 
-# ── معايير كل منصة (تُستخدم في الفحوصات القاعدية) ────────────────────────────
-PLATFORMS = {
-    "facebook":  {"len_ideal": (80, 600),  "len_max": 2000, "tags_ideal": (0, 3),  "tags_max": 5},
-    "instagram": {"len_ideal": (50, 400),  "len_max": 2200, "tags_ideal": (3, 11), "tags_max": 30},
-    "twitter":   {"len_ideal": (20, 240),  "len_max": 280,  "tags_ideal": (0, 2),  "tags_max": 3},
-    "x":         {"len_ideal": (20, 240),  "len_max": 280,  "tags_ideal": (0, 2),  "tags_max": 3},
-    "linkedin":  {"len_ideal": (100, 700), "len_max": 3000, "tags_ideal": (0, 5),  "tags_max": 8},
-}
-DEFAULT_PLATFORM = "facebook"
-
-
-def platform_spec(platform: str) -> dict:
-    return PLATFORMS.get((platform or "").lower().strip(), PLATFORMS[DEFAULT_PLATFORM])
+# ── معايير فيسبوك (النظام مخصّص لفيسبوك فقط) ──────────────────────────────────
+FACEBOOK_SPEC = {"len_ideal": (80, 600), "len_max": 2000, "tags_ideal": (0, 3), "tags_max": 5}

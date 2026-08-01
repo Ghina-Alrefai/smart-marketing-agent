@@ -17,7 +17,7 @@ from evaluation.rule_checks import RULE_SCORERS, GATE_CHECKERS
 def evaluate_post(post: dict, brand: dict | None = None, judge=None) -> dict:
     """
     قيّم منشوراً واحداً.
-      post  : قاموس المنشور (hook/caption/cta/hashtags/platform...)
+      post  : قاموس المنشور (hook/caption/cta/hashtags...)
       brand : إرشادات البراند (must_use_words/forbidden_words/preferred_cta)
       judge : دالة اختيارية للحَكَم اللغوي judge(dim_key, post, brand)->(score,note)
               (المرحلة 2). إن كانت None تبقى أبعاد الحَكَم معلّقة.

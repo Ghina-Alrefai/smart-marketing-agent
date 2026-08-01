@@ -5,14 +5,14 @@
 نفس المدخل يعطي نفس النتيجة دائماً ⇒ قابلية إعادة إنتاج 100%.
 
 البنية المتوقعة:
-  post  = {"hook","caption","cta","hashtags":[...],"platform","post_type","goal"}
+  post  = {"hook","caption","cta","hashtags":[...],"post_type","goal"}
   brand = {"must_use_words":[...],"forbidden_words":[...],"preferred_cta": "..."}
 """
 from __future__ import annotations
 
 import re
 
-from evaluation.rubric import platform_spec
+from evaluation.rubric import FACEBOOK_SPEC
 
 # قائمة أفعال الدعوة للتفاعل بالعربية (تُوسَّع حسب الحاجة)
 CTA_KEYWORDS = [
@@ -58,8 +58,8 @@ def check_cta(post: dict, brand: dict) -> tuple[float, str]:
     return 1.0, "لا توجد دعوة واضحة للتفاعل"
 
 
-def check_platform(post: dict, brand: dict) -> tuple[float, str]:
-    spec = platform_spec(post.get("platform", ""))
+def check_fb_fit(post: dict, brand: dict) -> tuple[float, str]:
+    spec = FACEBOOK_SPEC
     text = _full_text(post)
     n = len(text)
     tags = post.get("hashtags") or []
@@ -156,7 +156,7 @@ def gate_safety(post: dict, brand: dict) -> tuple[str, str]:
 
 def gate_spam(post: dict, brand: dict) -> tuple[str, str]:
     text = _full_text(post)
-    spec = platform_spec(post.get("platform", ""))
+    spec = FACEBOOK_SPEC
     tags = post.get("hashtags") or []
     n_tags = len(tags) if isinstance(tags, list) else 0
     signals = []
@@ -177,7 +177,7 @@ def gate_spam(post: dict, brand: dict) -> tuple[str, str]:
 
 # ── خرائط التوزيع ────────────────────────────────────────────────────────────
 RULE_SCORERS = {
-    "platform": check_platform,
+    "fb_fit": check_fb_fit,
     "cta": check_cta,
     "clarity": check_clarity,
     "grammar": check_grammar,
