@@ -5,6 +5,7 @@ The generation pipeline runs in a background thread so the API responds immediat
 from __future__ import annotations
 
 import threading
+from datetime import datetime, time, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
@@ -18,9 +19,16 @@ from api.schemas import (
 )
 from database.models import ContentPlan, GeneratedPost
 from database.session import get_db
-from workflows.generate_content_plan import run_content_generation_pipeline
+from tools.db_tools import (
+    create_scheduled_post,
+    get_scheduled_by_post,
+    delete_scheduled_by_post,
+)
+from workflows.campaign_pipeline import run_campaign_pipeline
 
 router = APIRouter(prefix="/plans", tags=["plans"])
+
+PEAK_HOUR = 20   # وقت الذروة الافتراضي للتفاعل: 8 مساءً
 
 
 # ── Content Plans ──────────────────────────────────────────────────────────
@@ -58,13 +66,21 @@ def trigger_generation(plan_id: int, background_tasks: BackgroundTasks, db: Sess
     if plan.status == "generating":
         return GenerationStatusOut(plan_id=plan_id, status="generating", message="Already running")
 
-    background_tasks.add_task(run_content_generation_pipeline, plan_id)
-
+    # مسار توليد واحد موحّد لكل الحملات: campaign_pipeline
+    background_tasks.add_task(run_campaign_pipeline, plan_id)
     return GenerationStatusOut(
-        plan_id=plan_id,
-        status="started",
-        message="التوليد بدأ. يمكنك متابعة الحالة عبر GET /plans/{plan_id}",
+        plan_id=plan_id, status="started",
+        message="بدأت الحملة. تابع الحالة عبر GET /plans/{plan_id}",
     )
+
+
+@router.get("/{plan_id}/campaign")
+def get_campaign_object(plan_id: int, db: Session = Depends(get_db)):
+    """كائن الحملة الموحّد النهائي (strategy + products + posts[idea/content/design/review])."""
+    plan = db.query(ContentPlan).filter(ContentPlan.id == plan_id).first()
+    if not plan:
+        raise HTTPException(404, "Plan not found")
+    return plan.campaign_data or {"campaign": {"strategy": plan.strategy or {}, "products": [], "posts": []}}
 
 
 @router.get("/{plan_id}/status", response_model=GenerationStatusOut)
@@ -94,6 +110,14 @@ def list_posts(plan_id: int, db: Session = Depends(get_db)):
     )
 
 
+def _peak_datetime_for(plan: ContentPlan | None, day_number: int) -> datetime:
+    """تاريخ بدء الحملة (أو اليوم) + (رقم اليوم-1) عند الساعة 8 مساءً."""
+    base = plan.start_date if (plan and plan.start_date) else datetime.utcnow()
+    base_date = base.date() if isinstance(base, datetime) else base
+    offset = max(0, (day_number or 1) - 1)
+    return datetime.combine(base_date, time(hour=PEAK_HOUR)) + timedelta(days=offset)
+
+
 @router.patch("/posts/{post_id}/approve", response_model=GeneratedPostOut)
 def approve_post(post_id: int, payload: PostApprovalUpdate, db: Session = Depends(get_db)):
     post = db.query(GeneratedPost).filter(GeneratedPost.id == post_id).first()
@@ -102,6 +126,25 @@ def approve_post(post_id: int, payload: PostApprovalUpdate, db: Session = Depend
 
     post.approved = payload.approved
     post.status = "approved" if payload.approved else "rejected"
+
+    if payload.approved:
+        # جدولة تلقائية عند الاعتماد (إن لم يكن مجدولاً مسبقاً) على وقت الذروة
+        if not get_scheduled_by_post(post.id):
+            plan = db.query(ContentPlan).filter(ContentPlan.id == post.content_plan_id).first()
+            when = _peak_datetime_for(plan, post.day_number)
+            create_scheduled_post(
+                user_id=(plan.user_id if plan else post.content_plan_id),
+                hook=post.hook or "", caption=post.caption or "", cta=post.cta or "",
+                hashtags=post.hashtags or [], image_url=post.image_url or "",
+                scheduled_at=when, time_text=f"وقت الذروة {PEAK_HOUR}:00 مساءً",
+                generated_post_id=post.id,
+            )
+            post.scheduled_at = when
+    else:
+        # عند الرفض: أزِل أي جدولة تلقائية سابقة لهذا المنشور
+        delete_scheduled_by_post(post.id)
+        post.scheduled_at = None
+
     db.commit()
     db.refresh(post)
     return post

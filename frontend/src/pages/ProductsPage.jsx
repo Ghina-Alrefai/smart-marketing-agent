@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
-import { Plus, Trash2, Package, Upload, ImageIcon } from 'lucide-react'
+import { Plus, Trash2, Package, Upload, ImageIcon, FileSpreadsheet, Images } from 'lucide-react'
 import useStore from '../store'
-import { createProduct, listProducts, deleteProduct, uploadProductImage } from '../api/client'
+import { createProduct, listProducts, deleteProduct, uploadProductImage, bulkUploadProducts } from '../api/client'
 
 const emptyForm = { title: '', description: '', price: '', category: '' }
 
@@ -14,6 +14,7 @@ export default function ProductsPage() {
   const [form, setForm] = useState(emptyForm)
   const [imageFile, setImageFile] = useState(null)
   const [imagePreview, setImagePreview] = useState(null)
+  const excelInputRef = useRef(null)
 
   const { data: products = [], isLoading } = useQuery({
     queryKey: ['products', user?.id],
@@ -48,6 +49,22 @@ export default function ProductsPage() {
     onSuccess: () => { qc.invalidateQueries(['products']); toast.success('تم حذف المنتج') },
   })
 
+  const excelMutation = useMutation({
+    mutationFn: (file) => bulkUploadProducts(user.id, file).then(r => r.data),
+    onSuccess: (data) => {
+      qc.invalidateQueries(['products'])
+      if (data.created > 0) toast.success(data.message)
+      else toast.error(data.errors?.[0] || 'لم تتم إضافة أي منتج')
+    },
+    onError: (e) => toast.error(e?.response?.data?.detail || 'تعذّر رفع الملف'),
+  })
+
+  const handleExcelChange = (e) => {
+    const file = e.target.files[0]
+    if (file) excelMutation.mutate(file)
+    e.target.value = ''   // نسمح برفع نفس الملف مجدداً
+  }
+
   const handleImageChange = (e) => {
     const file = e.target.files[0]
     if (!file) return
@@ -62,9 +79,21 @@ export default function ProductsPage() {
           <h1 className="text-2xl font-bold text-gray-900">المنتجات</h1>
           <p className="text-gray-500">{products.length} منتج مضاف</p>
         </div>
-        <button className="btn-primary flex items-center gap-2" onClick={() => setShowForm(s => !s)}>
-          <Plus size={18} /> إضافة منتج
-        </button>
+        <div className="flex items-center gap-2">
+          <input ref={excelInputRef} type="file" accept=".xlsx,.xlsm" className="hidden" onChange={handleExcelChange} />
+          <button
+            className="btn-secondary flex items-center gap-2"
+            onClick={() => excelInputRef.current?.click()}
+            disabled={excelMutation.isPending}
+            title="رفع ملف Excel للمنتجات (مع صور متعددة كروابط)"
+          >
+            <FileSpreadsheet size={18} />
+            {excelMutation.isPending ? 'جاري الرفع...' : 'رفع Excel'}
+          </button>
+          <button className="btn-primary flex items-center gap-2" onClick={() => setShowForm(s => !s)}>
+            <Plus size={18} /> إضافة منتج
+          </button>
+        </div>
       </div>
 
       {/* Add form */}
@@ -129,13 +158,20 @@ export default function ProductsPage() {
           {products.map(product => (
             <div key={product.id} className="card group relative overflow-hidden">
               {/* Image */}
-              {product.image_url ? (
-                <img src={product.image_url} alt={product.title} className="w-full h-36 object-cover rounded-xl mb-3" />
-              ) : (
-                <div className="w-full h-36 bg-gray-100 rounded-xl mb-3 flex items-center justify-center">
-                  <Package size={28} className="text-gray-300" />
-                </div>
-              )}
+              <div className="relative mb-3">
+                {product.image_url ? (
+                  <img src={product.image_url} alt={product.title} className="w-full h-36 object-cover rounded-xl" />
+                ) : (
+                  <div className="w-full h-36 bg-gray-100 rounded-xl flex items-center justify-center">
+                    <Package size={28} className="text-gray-300" />
+                  </div>
+                )}
+                {product.image_urls?.length > 1 && (
+                  <span className="absolute top-2 left-2 flex items-center gap-1 bg-black/60 text-white text-xs px-2 py-0.5 rounded-full">
+                    <Images size={12} /> {product.image_urls.length}
+                  </span>
+                )}
+              </div>
 
               <div className="flex items-start justify-between">
                 <div className="flex-1 min-w-0">
@@ -153,14 +189,23 @@ export default function ProductsPage() {
                 </button>
               </div>
 
-              {/* Post count badge */}
-              {product.post_count > 0 && (
-                <div className="mt-2">
+              {/* Marketed status + post count */}
+              <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                {product.is_marketed ? (
+                  <span className="text-xs bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full font-medium">
+                    ✓ تم التسويق له
+                  </span>
+                ) : (
+                  <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-medium">
+                    لم يُسوَّق بعد
+                  </span>
+                )}
+                {product.post_count > 0 && (
                   <span className="text-xs bg-primary-50 text-primary-600 px-2 py-0.5 rounded-full font-medium">
                     {product.post_count} منشور
                   </span>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           ))}
         </div>

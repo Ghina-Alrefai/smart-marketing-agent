@@ -32,6 +32,10 @@ export const uploadProductImage = (productId, file) => {
   const form = new FormData(); form.append('file', file)
   return api.post(`/products/${productId}/image`, form, { headers: { 'Content-Type': 'multipart/form-data' } })
 }
+export const bulkUploadProducts = (userId, file) => {
+  const form = new FormData(); form.append('file', file)
+  return api.post(`/products/bulk-upload?user_id=${userId}`, form, { headers: { 'Content-Type': 'multipart/form-data' } })
+}
 
 // Plans
 export const createPlan       = (userId, data) => api.post(`/plans/?user_id=${userId}`, data)
@@ -45,5 +49,15 @@ export const approvePost      = (postId, approved) => api.patch(`/plans/posts/${
 
 // Chat (Orchestrator)
 export const sendChatMessage = (data) => api.post('/chat/message', data)
+
+// Scheduled posts
+export const listScheduled  = (userId) => api.get(`/scheduled/user/${userId}`)
+export const deleteScheduled = (id)     => api.delete(`/scheduled/${id}`)
+export const updateScheduledTime = (id, scheduledAt) =>
+  api.patch(`/scheduled/${id}/time`, { scheduled_at: scheduledAt })
+
+// Events (المناسبات ضمن مدة الحملة)
+export const listEvents = (start, days) =>
+  api.get(`/events/`, { params: { start, days } })
 
 export default api

@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from 'react-router-dom'
-import { LayoutDashboard, Megaphone, Package, Sparkles, Settings, MessageCircle } from 'lucide-react'
+import { LayoutDashboard, Megaphone, Package, Sparkles, Settings, MessageCircle, CalendarClock } from 'lucide-react'
 import clsx from 'clsx'
 
 const navItems = [
@@ -8,6 +8,7 @@ const navItems = [
   { to: '/brand', icon: Sparkles, label: 'البراند' },
   { to: '/products', icon: Package, label: 'المنتجات' },
   { to: '/campaigns', icon: Megaphone, label: 'الحملات' },
+  { to: '/scheduled', icon: CalendarClock, label: 'المجدولة' },
   { to: '/settings', icon: Settings, label: 'الإعدادات' },
 ]
 

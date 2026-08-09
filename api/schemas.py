@@ -1,5 +1,5 @@
 from datetime import datetime
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, field_validator
 
 
 class UserCreate(BaseModel):
@@ -54,9 +54,17 @@ class ProductCreate(BaseModel):
 class ProductOut(ProductCreate):
     id: int; user_id: int
     image_url: str | None = None
+    image_urls: list[str] = []
+    source_url: str | None = None
     post_count: int = 0
+    is_marketed: bool = False
     created_at: datetime
     model_config = {"from_attributes": True}
+
+    @field_validator("image_urls", mode="before")
+    @classmethod
+    def _none_to_list(cls, v):   # الصفوف القديمة قد تحمل NULL
+        return v or []
 
 
 class ContentPlanCreate(BaseModel):
@@ -64,11 +72,23 @@ class ContentPlanCreate(BaseModel):
     campaign_name: str | None = None
     start_date: datetime | None = None
     days: int = 7
-    campaign_goal: str | None = None
+    campaign_goal: str | None = None          # يبقى للتوافق الخلفي
+    campaign_goals: list[str] = []            # أهداف متعددة
+    product_ids: list[int] = []               # المنتجات المختارة (فارغ = الكل)
+    selected_events: list[dict] = []          # المناسبات المختارة ضمن المدة
+    include_trends: bool = False              # تضمين التريندات
+    selected_trends: list[dict] = []          # التريندات المختارة (سياق الحملة)
+    mode: str = "campaign"                    # campaign (الجديدة) | legacy
 
 class ContentPlanOut(ContentPlanCreate):
     id: int; user_id: int; status: str; created_at: datetime
     model_config = {"from_attributes": True}
+
+    @field_validator("campaign_goals", "product_ids", "selected_events", "selected_trends",
+                     mode="before")
+    @classmethod
+    def _none_to_list(cls, v):   # الصفوف القديمة قد تحمل NULL
+        return v or []
 
 
 class PostApprovalUpdate(BaseModel):
@@ -88,3 +108,17 @@ class GenerationStatusOut(BaseModel):
     plan_id: int; status: str
     posts_generated: int | None = None
     message: str | None = None
+
+
+class ScheduledPostOut(BaseModel):
+    id: int; hook: str | None; caption: str | None; cta: str | None
+    hashtags: list[str] = []
+    image_url: str | None = None
+    scheduled_at: str | None = None
+    time_text: str | None = None
+    status: str
+    created_at: str | None = None
+
+
+class ScheduledTimeUpdate(BaseModel):
+    scheduled_at: datetime   # الوقت الجديد للنشر

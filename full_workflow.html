@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>الورك فلو الكامل للنظام — AI Marketing OS</title>
+<style>
+  :root{
+    --ground:#eef0f5; --paper:#ffffff; --frame:#c9cfdd;
+    --ink:#1c2333; --ink-2:#41496a; --muted:#69728e; --faint:#8a91a8;
+    --navy:#2b3a67; --accent:#3f5bd0; --accent-soft:#eef1fc;
+    --model:#6b46c1; --model-soft:#f1ecfb;
+    --mem:#2f7d5b; --mem-soft:#e9f6ef;
+    --run:#556084; --run-soft:#f4f5f9;
+    --eval:#b3841f; --eval-soft:#fdf7e8;
+    --opt-stroke:#8a91a8; --opt-soft:#f6f7fa;
+    --arrow:#4a5372; --arrow-dash:#8a91a8;
+    --mono:"Cascadia Code",Consolas,"SFMono-Regular",ui-monospace,monospace;
+    --sans:"Segoe UI","Noto Kufi Arabic",Tahoma,system-ui,sans-serif;
+    --serif:"Cambria","Times New Roman",Georgia,serif;
+    --shadow:0 14px 34px -26px rgba(20,28,60,.5);
+  }
+  :root[data-theme="dark"]{
+    --ground:#0f1220; --paper:#161a29; --frame:#2c3350;
+    --ink:#e8ebf6; --ink-2:#c0c6de; --muted:#9198b6; --faint:#6b7294;
+    --navy:#aeb9e6; --accent:#8497f2; --accent-soft:#1d2444;
+    --model:#b69bf0; --model-soft:#241b3d;
+    --mem:#4fb98a; --mem-soft:#123024;
+    --run:#8a93b6; --run-soft:#1a1f31;
+    --eval:#d9b559; --eval-soft:#2a2412;
+    --opt-stroke:#5b658a; --opt-soft:#171b2b;
+    --arrow:#8a93b6; --arrow-dash:#69708f;
+    --shadow:0 14px 34px -24px rgba(0,0,0,.7);
+  }
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);line-height:1.8;padding:0 0 70px}
+  .wrap{max-width:960px;margin:0 auto;padding:0 20px}
+
+  /* header */
+  header.pg{padding:40px 0 12px;text-align:center}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--accent)}
+  h1{font-family:var(--serif);font-size:clamp(23px,4vw,34px);margin:10px 0 6px;font-weight:700}
+  header.pg p{color:var(--muted);margin:0;font-size:15px}
+  .toolbar{display:flex;gap:8px;justify-content:center;margin:18px 0 4px}
+  .toolbar button{font-family:var(--sans);font-size:13px;padding:7px 15px;border-radius:9px;cursor:pointer;
+    background:var(--paper);border:1px solid var(--frame);color:var(--ink)}
+  .toolbar button:hover{border-color:var(--accent);color:var(--accent)}
+
+  /* legend */
+  .legend{display:flex;flex-wrap:wrap;gap:10px 20px;justify-content:center;max-width:860px;margin:20px auto 8px;
+    background:var(--paper);border:1px solid var(--frame);border-radius:12px;padding:14px 18px}
+  .lg{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink-2)}
+  .sw{width:24px;height:15px;border-radius:4px;flex-shrink:0;border:1.6px solid}
+  .sw.start{border-radius:9px;background:var(--mem-soft);border-color:var(--mem)}
+  .sw.opt{background:var(--opt-soft);border-color:var(--opt-stroke);border-style:dashed}
+  .sw.model{background:var(--model-soft);border-color:var(--model)}
+  .sw.mem{background:var(--mem-soft);border-color:var(--mem)}
+  .sw.run{background:var(--run-soft);border-color:var(--run)}
+  .sw.eval{background:var(--eval-soft);border-color:var(--eval)}
+  .sw.orch{background:var(--accent-soft);border-color:var(--accent)}
+  .sw.proc{background:var(--paper);border-color:var(--muted)}
+  .sw.svc{background:var(--opt-soft);border-color:var(--opt-stroke)}
+
+  /* flow spine */
+  .flow{display:flex;flex-direction:column;align-items:center;margin:26px auto 0}
+
+  /* phase band */
+  .phase{width:100%;display:flex;flex-direction:column;align-items:center}
+  .phase-tag{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);
+    background:var(--paper);border:1px solid var(--frame);border-radius:999px;padding:5px 16px;margin:6px 0}
+
+  /* generic node */
+  .node{width:100%;max-width:640px;background:var(--paper);border:1.6px solid var(--frame);border-radius:14px;
+    padding:16px 20px;box-shadow:var(--shadow);position:relative}
+  .node .step{position:absolute;top:-13px;inset-inline-start:20px;width:28px;height:28px;border-radius:9px;
+    display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:700;font-size:13px;
+    background:var(--accent);color:#fff;box-shadow:var(--shadow)}
+  .node h3{margin:2px 0 4px;font-size:16.5px;font-weight:700}
+  .node .desc{color:var(--muted);font-size:13.5px;margin:0}
+  .node .out{margin-top:10px;font-size:13px;color:var(--accent);font-weight:700}
+  .tag{position:absolute;top:-11px;inset-inline-end:18px;font-family:var(--mono);font-size:10.5px;
+    padding:2px 9px;border-radius:999px;background:var(--opt-soft);border:1px dashed var(--opt-stroke);color:var(--muted)}
+
+  /* node color variants */
+  .n-start{border-radius:34px;background:var(--mem-soft);border-color:var(--mem)}
+  .n-start .step{background:var(--mem)}
+  .n-start h3{color:var(--mem)}
+  .n-opt{border-style:dashed;border-color:var(--opt-stroke);background:var(--opt-soft)}
+  .n-opt .step{background:var(--opt-stroke)}
+  .n-model{background:var(--model-soft);border-color:var(--model)}
+  .n-model .step{background:var(--model)}
+  .n-model h3{color:var(--model)}
+  .n-model .out{color:var(--model)}
+  .n-mem{background:var(--mem-soft);border-color:var(--mem);border-width:2px;max-width:680px}
+  .n-mem .step{background:var(--mem)}
+  .n-mem h3{color:var(--mem)}
+  .n-eval{background:var(--eval-soft);border-color:var(--eval);max-width:680px}
+  .n-eval .step{background:var(--eval)}
+  .n-eval h3{color:var(--eval)}
+
+  /* two-option grid inside a node */
+  .opts{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+  @media (max-width:620px){.opts{grid-template-columns:1fr}}
+  .opt{border:1px solid var(--frame);border-radius:11px;padding:12px 14px;background:var(--paper);position:relative}
+  .opt .lbl{font-family:var(--mono);font-weight:700;font-size:12px;color:var(--accent);
+    background:var(--accent-soft);border-radius:6px;padding:1px 8px;display:inline-block;margin-bottom:6px}
+  .opt b{display:block;font-size:14px;margin-bottom:3px}
+  .opt p{margin:0;font-size:12.5px;color:var(--muted);line-height:1.7}
+  .opt ul{margin:6px 0 0;padding:0;list-style:none}
+  .opt ul li{position:relative;padding-inline-start:15px;font-size:12.5px;color:var(--ink-2);margin:2px 0}
+  .opt ul li::before{content:"›";position:absolute;inset-inline-start:0;color:var(--accent);font-weight:700}
+
+  /* memory chips */
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+  .chip{font-size:12.5px;padding:6px 13px;border-radius:999px;background:var(--paper);border:1px solid var(--mem);
+    color:var(--mem);font-weight:600}
+
+  /* eval checklist */
+  .checks{display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;margin-top:12px}
+  @media (max-width:620px){.checks{grid-template-columns:1fr}}
+  .checks div{position:relative;padding-inline-start:24px;font-size:13.5px;color:var(--ink-2)}
+  .checks div::before{content:"✓";position:absolute;inset-inline-start:0;width:17px;height:17px;border-radius:5px;
+    background:var(--eval-soft);color:var(--eval);border:1px solid var(--eval);font-size:11px;font-weight:700;
+    display:flex;align-items:center;justify-content:center}
+
+  /* connectors */
+  .arrow{width:2px;height:38px;background:var(--arrow);position:relative;flex-shrink:0}
+  .arrow::after{content:"";position:absolute;bottom:-1px;left:50%;transform:translateX(-50%);
+    border:6px solid transparent;border-top-color:var(--arrow);border-bottom:0}
+  .arrow.lbl-wrap{display:flex}
+  .arrow .albl{position:absolute;top:50%;transform:translateY(-50%);inset-inline-start:12px;white-space:nowrap;
+    font-size:11.5px;color:var(--muted);font-family:var(--mono)}
+  .arrow.short{height:26px}
+
+  /* loop-back pill */
+  .loopback{max-width:680px;width:100%;margin-top:16px;display:flex;align-items:center;gap:10px;
+    border:1.6px dashed var(--mem);border-radius:12px;padding:11px 16px;background:var(--mem-soft);
+    color:var(--mem);font-size:13.5px;font-weight:600}
+  .loopback .ic{font-size:18px;line-height:1}
+
+  /* callout */
+  .callout{max-width:820px;margin:26px auto 0;border:1px solid var(--frame);border-inline-start:3px solid var(--accent);
+    background:var(--paper);border-radius:12px;padding:14px 18px;font-size:13.5px;color:var(--ink-2)}
+  .callout b{color:var(--ink)}
+
+  /* ===== bridge / setup blocks between the two sub-paths ===== */
+  .bridge{max-width:680px;width:100%;margin:14px 0;display:flex;align-items:center;gap:10px;
+    border:1.4px dashed var(--accent);border-radius:10px;padding:10px 16px;background:var(--accent-soft);
+    color:var(--accent);font-size:12.5px;font-weight:600}
+  .setupcard{width:100%;max-width:680px;background:var(--paper);border:1.6px solid var(--frame);border-radius:14px;
+    padding:14px 18px;box-shadow:var(--shadow);margin-top:4px}
+  .setupcard h4{margin:0 0 4px;font-size:14px}
+  .setup3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px}
+  @media (max-width:620px){.setup3{grid-template-columns:1fr}}
+  .setup3 .s3{border:1px solid var(--frame);border-radius:10px;padding:9px 11px;background:var(--opt-soft);font-size:12px;color:var(--ink-2)}
+  .setup3 .s3 b{display:block;font-size:12.5px;margin-bottom:2px;color:var(--ink)}
+
+  /* ===== orchestrator/pipeline side-figures ===== */
+  .orchfig{margin-top:8px;width:100%;max-width:760px;background:var(--paper);border:1.6px solid var(--frame);
+    border-radius:16px;padding:18px 16px 10px;box-shadow:var(--shadow)}
+  .orchfig .figtitle{text-align:center;font-family:var(--serif);font-weight:700;font-size:15.5px;color:var(--navy);margin-bottom:2px}
+  .orchfig .figsub{text-align:center;font-family:var(--mono);font-size:11px;color:var(--faint);margin-bottom:6px}
+  .orchfig svg{width:100%;height:auto;display:block}
+  .orchfig .figcap{font-size:12.5px;color:var(--muted);text-align:center;margin:8px auto 2px;
+    padding-top:10px;border-top:1px solid var(--frame);line-height:1.75;max-width:70ch;margin-inline:auto}
+  .orchfig .figcap b{color:var(--ink-2)}
+
+  .orchbanner{background:var(--accent-soft);border:1.6px solid var(--accent);border-radius:12px;padding:12px 16px;margin:6px 0 4px}
+  .orchbanner b{color:var(--accent);font-size:14.5px;display:block;margin-bottom:3px}
+  .orchbanner span{font-size:12px;color:var(--muted)}
+
+  .intentgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:14px}
+  @media (max-width:620px){.intentgrid{grid-template-columns:1fr}}
+  .icard{border:1px solid var(--frame);border-radius:12px;padding:11px 14px;background:var(--paper)}
+  .icard.warn{border-color:var(--eval);background:var(--eval-soft)}
+  .icard.bridge2{border-color:var(--accent);background:var(--accent-soft)}
+  .icard .code{font-family:var(--mono);font-weight:700;font-size:12px;color:var(--accent);
+    background:var(--accent-soft);border-radius:6px;padding:2px 8px;display:inline-block;margin-bottom:7px}
+  .icard.warn .code{color:var(--eval);background:var(--paper);border:1px solid var(--eval)}
+  .icard.bridge2 .code{color:var(--accent);background:var(--paper);border:1px solid var(--accent)}
+  .chain{display:flex;flex-wrap:wrap;align-items:center;gap:4px;font-size:12px;color:var(--ink-2)}
+  .chain .cs{background:var(--run-soft);border:1px solid var(--run);border-radius:999px;padding:2px 9px;white-space:nowrap}
+  .chain .ar{color:var(--faint);font-size:11px}
+  .icard .note{margin:7px 0 0;font-size:11.5px;color:var(--muted);line-height:1.6}
+  .intentnote{font-size:12px;color:var(--muted);margin-top:10px;text-align:center}
+
+  .obox{fill:var(--accent-soft);stroke:var(--accent);stroke-width:2}
+  .abox{fill:var(--run-soft);stroke:var(--run);stroke-width:1.7}
+  .procbox{fill:var(--paper);stroke:var(--muted);stroke-width:1.4}
+  .svcbox{fill:var(--opt-soft);stroke:var(--opt-stroke);stroke-width:1.6}
+  .loopbox2{fill:var(--eval-soft);stroke:var(--eval);stroke-width:1.6;stroke-dasharray:7 5}
+  .pipearrow{fill:none;stroke:var(--arrow);stroke-width:1.8}
+  .svcarrow{fill:none;stroke:var(--arrow-dash);stroke-width:1.4;stroke-dasharray:5 4}
+  .otitle{fill:var(--accent);font-family:var(--sans);font-weight:700;font-size:14.5px}
+  .osub{fill:var(--muted);font-family:var(--mono);font-size:10.5px}
+  .atitle{fill:var(--ink);font-family:var(--sans);font-weight:700;font-size:13px}
+  .asub{fill:var(--muted);font-family:var(--sans);font-size:10.5px}
+  .ttitle{fill:var(--ink-2);font-family:var(--sans);font-weight:700;font-size:12.5px}
+  .tsub{fill:var(--faint);font-family:var(--mono);font-size:10px}
+  .lane2{fill:var(--opt-stroke);font-family:var(--mono);font-size:10.5px;letter-spacing:.08em}
+  .anum-c{fill:var(--run)}
+  .anum-t{fill:#fff;font-family:var(--mono);font-weight:700;font-size:12px}
+  .looplbl{fill:var(--eval);font-family:var(--sans);font-weight:700;font-size:13px}
+  .contlbl{fill:var(--muted);font-family:var(--mono);font-size:11px}
+  .savelbl{fill:var(--faint);font-family:var(--mono);font-size:10px}
+
+  /* agent glossary table */
+  .gloss{margin-top:16px;overflow-x:auto;border:1px solid var(--frame);border-radius:14px;background:var(--paper);box-shadow:var(--shadow)}
+  table.gtab{border-collapse:collapse;width:100%;min-width:760px;font-size:13px}
+  table.gtab th,table.gtab td{text-align:right;padding:10px 14px;border-bottom:1px solid var(--frame);vertical-align:top}
+  table.gtab thead th{background:var(--opt-soft);font-size:11.5px;color:var(--muted);font-weight:700}
+  table.gtab tbody tr:last-child td{border-bottom:0}
+  table.gtab td.who{font-weight:700;white-space:nowrap}
+  table.gtab .kind{font-family:var(--mono);font-size:10.5px;padding:2px 8px;border-radius:999px;white-space:nowrap;display:inline-block}
+  .kind.k-agent{background:var(--run-soft);color:var(--run);border:1px solid var(--run)}
+  .kind.k-proc{background:var(--paper);color:var(--muted);border:1px solid var(--muted)}
+  .kind.k-svc{background:var(--opt-soft);color:var(--opt-stroke);border:1px solid var(--opt-stroke)}
+  .kind.k-orch{background:var(--accent-soft);color:var(--accent);border:1px solid var(--accent)}
+  table.gtab code{font-family:var(--mono);font-size:11.5px;color:var(--accent);background:var(--accent-soft);
+    padding:1px 6px;border-radius:5px;direction:ltr;display:inline-block}
+  table.gtab td.mut{color:var(--muted);font-size:12.5px}
+
+  /* steps text */
+  .steps{max-width:820px;margin:30px auto 0}
+  .steps h2{font-family:var(--serif);font-size:19px;color:var(--navy);border-bottom:2px solid var(--accent);
+    padding-bottom:7px;display:inline-block}
+  ol.sl{counter-reset:s;list-style:none;padding:0;margin:16px 0 0}
+  ol.sl li{position:relative;padding:9px 48px 9px 14px;margin:0 0 8px;background:var(--paper);
+    border:1px solid var(--frame);border-radius:10px;font-size:13.5px;color:var(--ink-2)}
+  ol.sl li::before{counter-increment:s;content:counter(s);position:absolute;top:12px;inset-inline-start:12px;
+    width:24px;height:24px;border-radius:7px;background:var(--accent-soft);color:var(--accent);
+    font-family:var(--mono);font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center}
+  ol.sl b{color:var(--ink)}
+
+  @media print{.toolbar{display:none}body{background:#fff}.node,.legend,.callout,ol.sl li,.orchfig,.gloss,.setupcard{box-shadow:none}}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="pg">
+    <div class="kicker">AI Marketing OS · Full System Workflow</div>
+    <h1>الورك فلو الكامل للنظام</h1>
+    <p>من إدخال البراند وبناء النمط → الذاكرة → مسارَي التشغيل (مساعد ذكي / حملة إعلانية) → التقييم (حلقة مغلقة)</p>
+    <div class="toolbar">
+      <button id="themebtn">🌙 الوضع الليلي</button>
+      <button onclick="window.print()">🖨️ طباعة / حفظ PDF</button>
+    </div>
+  </header>
+
+  <!-- Legend -->
+  <div class="legend">
+    <div class="lg"><span class="sw start"></span> بداية / نهاية</div>
+    <div class="lg"><span class="sw opt"></span> خطوة اختيارية</div>
+    <div class="lg"><span class="sw model"></span> موديل ذكاء اصطناعي</div>
+    <div class="lg"><span class="sw mem"></span> الذاكرة (Memory)</div>
+    <div class="lg"><span class="sw run"></span> وكيل ذكاء اصطناعي</div>
+    <div class="lg"><span class="sw proc"></span> خطوة معالجة بيانات (بلا AI)</div>
+    <div class="lg"><span class="sw svc"></span> خدمة مشتركة (DB · Trend)</div>
+    <div class="lg"><span class="sw orch"></span> وكيل تنسيق (Orchestrator)</div>
+    <div class="lg"><span class="sw eval"></span> تقييم / حلقة تكرار</div>
+  </div>
+
+  <!-- ===================== FLOW ===================== -->
+  <div class="flow">
+
+    <!-- PHASE 1 -->
+    <div class="phase">
+      <div class="phase-tag">المرحلة ١ · التحضير وبناء النمط</div>
+
+      <div class="node n-start">
+        <span class="step">1</span>
+        <h3>إدخال هوية البراند</h3>
+        <p class="desc">يُدخِل المستخدم عناصر العلامة التجارية: <b>الألوان</b> · <b>الطابع/النبرة</b> · <b>اللوغو أو التيمبليت</b>.</p>
+      </div>
+
+      <div class="arrow"></div>
+
+      <div class="node n-opt">
+        <span class="step">2</span>
+        <span class="tag">اختياري</span>
+        <h3>استيراد المنشورات السابقة</h3>
+        <p class="desc">تغذية النظام بأمثلة سابقة ليتعلّم منها النمط — بإحدى طريقتين:</p>
+        <div class="opts">
+          <div class="opt">
+            <span class="lbl">طريقة أ</span>
+            <b>إدخال يدوي</b>
+            <p>لصق المنشورات/التصاميم السابقة مباشرةً.</p>
+          </div>
+          <div class="opt">
+            <span class="lbl">طريقة ب</span>
+            <b>ربط فيسبوك عبر API</b>
+            <p>يمنح المستخدم الإذن، فيُستخرَج المنشورات تلقائيًا من صفحته.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="arrow"></div>
+
+      <div class="node n-model">
+        <span class="step">3</span>
+        <h3>موديل تعلّم النمط</h3>
+        <p class="desc">يتعلّم النمط من المنشورات السابقة عبر نموذجين متخصّصين:</p>
+        <div class="opts">
+          <div class="opt">
+            <span class="lbl">نموذج ١</span>
+            <b>نمط الكتابة (نصّ)</b>
+            <p>أسلوب الصياغة، النبرة، تركيب الجُمل، الـ CTA.</p>
+          </div>
+          <div class="opt">
+            <span class="lbl">نموذج ٢</span>
+            <b>النمط البصري (صور)</b>
+            <p>الألوان، التكوين، الطابع البصري للتصاميم.</p>
+          </div>
+        </div>
+        <div class="out">◂ المخرَج: النمط المستخرَج (Pattern)</div>
+      </div>
+    </div>
+
+    <div class="arrow lbl-wrap"><span class="albl">النمط المستخرَج ←</span></div>
+
+    <!-- PHASE 2 -->
+    <div class="phase">
+      <div class="phase-tag">المرحلة ٢ · الذاكرة</div>
+
+      <div class="node n-mem">
+        <span class="step">4</span>
+        <h3>🧠 الذاكرة (Memory)</h3>
+        <p class="desc">المحور المركزي — تُخزَّن فيها النتائج وتُغذّى منها كل المراحل التالية، وتعود إليها التغذية الراجعة:</p>
+        <div class="chips">
+          <span class="chip">النمط المستخرَج</span>
+          <span class="chip">بيانات البراند (Brand Guidelines)</span>
+          <span class="chip">الفيدباك ونتائج التقييم</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="arrow"></div>
+
+    <!-- PHASE 3 -->
+    <div class="phase">
+      <div class="phase-tag">المرحلة ٣ · التشغيل والإنتاج</div>
+
+      <div class="node" style="border-color:var(--run)">
+        <span class="step" style="background:var(--run)">5</span>
+        <h3>اختيار الوضع</h3>
+        <p class="desc">يعتمد على النمط + الذاكرة، وأمام المستخدم مساران مستقلّان (بديلان، ليسا متتاليَين):</p>
+        <div class="opts">
+          <div class="opt">
+            <span class="lbl">وضع أ</span>
+            <b>مساعد ذكي</b>
+            <p>طلب حرّ بلغة طبيعية (شات) — يوجّهه Orchestrator لنية واحدة من ٨.</p>
+          </div>
+          <div class="opt">
+            <span class="lbl">وضع ب</span>
+            <b>حملة إعلانية</b>
+            <p>إعداد كامل (هدف + منتجات + تريند) يُشغّل أنبوب إنتاج كامل.</p>
+          </div>
+        </div>
+        <div class="out">◂ التفاصيل: مسار أ ↓ ومسار ب ↓</div>
+      </div>
+
+      <div class="arrow short lbl-wrap"><span class="albl">مسار أ ↓</span></div>
+
+      <!-- ===================== SUB-FIGURE A — CHAT ORCHESTRATOR ===================== -->
+      <figure class="orchfig">
+        <div class="figtitle">مسار أ — المساعد الذكي: توجيه النيّات (Orchestrator Intent Routing)</div>
+        <div class="figsub">يوسّع الخطوة ٥ · لا يُضاف كخطوة رئيسية جديدة</div>
+
+        <div class="orchbanner">
+          <b>وكيل التنسيق — Orchestrator Agent</b>
+          <span>handle_message() → يصنّف النية (Intent Classifier) ويستخرج الحقول الناقصة (Entity Extractor)، ثم يوجّه لأحد المسارات الثمانية أدناه — أو يعود بسؤال توضيحي إن كان حقل ناقص.</span>
+        </div>
+
+        <div class="intentgrid">
+          <div class="icard">
+            <span class="code">WRITE_POST</span>
+            <div class="chain"><span class="cs">🏷️ برند</span><span class="ar">←</span><span class="cs">📦 منتج</span><span class="ar">←</span><span class="cs">✍️ محتوى</span><span class="ar">←</span><span class="cs">🔎 مراجعة</span></div>
+            <p class="note">كتابة منشور نصّي كامل مع مراجعة جودة.</p>
+          </div>
+          <div class="icard">
+            <span class="code">CREATE_DESIGN</span>
+            <div class="chain"><span class="cs">🏷️ برند</span><span class="ar">←</span><span class="cs">📦 منتج</span><span class="ar">←</span><span class="cs">🎨 تصميم</span></div>
+            <p class="note">توليد الصورة التسويقية فقط، بلا نص.</p>
+          </div>
+          <div class="icard">
+            <span class="code">WRITE_AND_DESIGN</span>
+            <div class="chain"><span class="cs">🏷️ برند</span><span class="ar">←</span><span class="cs">📦 منتج</span><span class="ar">←</span><span class="cs">✍️ محتوى</span><span class="ar">←</span><span class="cs">🎨 تصميم</span><span class="ar">←</span><span class="cs">🔎 مراجعة</span></div>
+            <p class="note">نص + تصميم معًا بطلب واحد.</p>
+          </div>
+          <div class="icard">
+            <span class="code">REVIEW</span>
+            <div class="chain"><span class="cs">🔎 مراجعة</span></div>
+            <p class="note">تقييم مباشر لنص يُلصقه المستخدم — بلا سلسلة وكلاء.</p>
+          </div>
+          <div class="icard">
+            <span class="code">GET_STRATEGY</span>
+            <div class="chain"><span class="cs">🏷️ برند</span><span class="ar">←</span><span class="cs">🧭 استراتيجية</span></div>
+            <p class="note">اقتراح خطة/منتج موصى به دون توليد فعلي.</p>
+          </div>
+          <div class="icard warn">
+            <span class="code">GET_TRENDS ⚠</span>
+            <div class="chain"><span class="cs">📈 أداة التريند</span></div>
+            <p class="note">تريندات فيسبوك الرائجة لمجال البراند — placeholder حاليًا بالكود.</p>
+          </div>
+          <div class="icard">
+            <span class="code">SCHEDULE_POST</span>
+            <div class="chain"><span class="cs">⏱️ تحديد الوقت</span><span class="ar">←</span><span class="cs">🗓️ جدولة/نشر</span></div>
+            <p class="note">يجدول آخر منشور بالجلسة (scheduled_posts) أو ينشره فورًا.</p>
+          </div>
+          <div class="icard bridge2">
+            <span class="code">FULL_PIPELINE</span>
+            <div class="chain"><span class="cs">🧭 استراتيجية</span><span class="ar">←</span><span class="cs">…</span><span class="ar">←</span><span class="cs">🗓️ جدولة</span></div>
+            <p class="note">يشغّل <b>نفس مسار الحملة الكاملة (مسار ب)</b> أدناه ⬇ — نقطة تلاقي المسارين.</p>
+          </div>
+        </div>
+        <div class="intentnote">🏷️ برند = Brand Agent (analyze_brand) → Brand Guidelines، تُخزَّن بالذاكرة/الجلسة لتقليل التكرار.</div>
+      </figure>
+
+      <div class="bridge">⤵ نقطتا الدخول لمسار الحملة: اختيار «حملة إعلانية» بالخطوة ٥ مباشرة، أو نية FULL_PIPELINE من المساعد الذكي</div>
+
+      <!-- ===================== SUB-FIGURE B — CAMPAIGN PIPELINE ===================== -->
+      <div class="setupcard">
+        <h4>🧩 إعداد الحملة (إدخال المستخدم قبل التشغيل)</h4>
+        <div class="setup3">
+          <div class="s3"><b>🎯 هدف الحملة</b>وعي بالعلامة / مبيعات / تفاعل...</div>
+          <div class="s3"><b>📦 المنتجات</b>منتج واحد أو أكثر — قائمة يحدّدها المستخدم</div>
+          <div class="s3"><b>📈 تضمين التريند؟</b>تفعيل/تعطيل + معاينة التريند نفسه قبل التأكيد</div>
+        </div>
+      </div>
+
+      <figure class="orchfig">
+        <div class="figtitle">مسار ب — الحملة الإعلانية (Campaign Pipeline)</div>
+        <div class="figsub">يُشغَّل من: «حملة إعلانية» بالخطوة ٥، أو نية FULL_PIPELINE</div>
+        <svg viewBox="0 0 1040 860" role="img" aria-label="مخطط أنبوب الحملة الإعلانية الكامل">
+          <defs>
+            <marker id="arw3" markerWidth="10" markerHeight="10" refX="7.5" refY="3.2" orient="auto" markerUnits="userSpaceOnUse">
+              <path d="M0,0 L8,3.2 L0,6.4 Z" fill="var(--arrow)"/>
+            </marker>
+            <marker id="arwd3" markerWidth="9" markerHeight="9" refX="6.6" refY="3" orient="auto" markerUnits="userSpaceOnUse">
+              <path d="M0,0 L7,3 L0,6 Z" fill="var(--arrow-dash)"/>
+            </marker>
+          </defs>
+
+          <!-- pipeline arrows (solid, sequential) -->
+          <path class="pipearrow" marker-end="url(#arw3)" d="M660,104 L660,150"/>
+          <path class="pipearrow" marker-end="url(#arw3)" d="M660,206 L660,236"/>
+          <path class="pipearrow" marker-end="url(#arw3)" d="M660,300 L660,330"/>
+          <path class="pipearrow" marker-end="url(#arw3)" d="M660,386 L660,416"/>
+          <path class="pipearrow" marker-end="url(#arw3)" d="M660,480 L660,506"/>
+          <path class="pipearrow" marker-end="url(#arw3)" d="M660,570 L660,596"/>
+          <path class="pipearrow" marker-end="url(#arw3)" d="M660,660 L660,716"/>
+          <path class="pipearrow" marker-end="url(#arw3)" d="M660,780 L660,806"/>
+          <text class="contlbl" x="660" y="822" text-anchor="middle">استمرار ← بعد الإنتاج</text>
+
+          <!-- DB / Trend dashed service connectors -->
+          <path class="svcarrow" marker-end="url(#arwd3)" d="M335,178 L500,178"/>
+          <path class="svcarrow" marker-end="url(#arwd3)" d="M335,268 L500,268"/>
+          <path class="svcarrow" marker-end="url(#arwd3)" d="M335,210 L400,210 L400,358 L500,358"/>
+          <path class="svcarrow" marker-end="url(#arwd3)" d="M480,748 L400,748"/>
+          <text class="savelbl" x="392" y="732" text-anchor="end">حفظ ← قاعدة البيانات</text>
+
+          <!-- lane label + DB + Trend Tool -->
+          <text class="lane2" x="210" y="128" text-anchor="middle">خدمة مشتركة · SHARED SERVICES</text>
+          <g>
+            <rect class="box svcbox" x="85" y="146" width="250" height="64" rx="9"/>
+            <text class="ttitle" x="210" y="173" text-anchor="middle">قاعدة البيانات</text>
+            <text class="tsub" x="210" y="193" text-anchor="middle">products · brands · generated_posts · scheduled_posts</text>
+          </g>
+          <g>
+            <rect class="box svcbox" x="85" y="240" width="250" height="56" rx="9"/>
+            <text class="ttitle" x="210" y="264" text-anchor="middle">أداة التريند</text>
+            <text class="tsub" x="210" y="282" text-anchor="middle">Trend Tool · تريندات فيسبوك الرائجة</text>
+          </g>
+
+          <!-- Strategy Agent (outside loop) -->
+          <g>
+            <circle class="anum-c" cx="505" cy="72" r="12"/><text class="anum-t" x="505" y="76" text-anchor="middle">1</text>
+            <rect class="box abox" x="480" y="40" width="360" height="64" rx="10"/>
+            <text class="atitle" x="660" y="67" text-anchor="middle">وكيل الاستراتيجية — Strategy Agent</text>
+            <text class="asub" x="660" y="87" text-anchor="middle">خطة الحملة: عدد المنشورات، نوعها، والمنتج لكل منشور</text>
+          </g>
+
+          <!-- LOOP CONTAINER -->
+          <rect class="loopbox2" x="470" y="96" width="384" height="584" rx="14"/>
+          <text class="looplbl" x="662" y="122" text-anchor="middle">◆ لكل منتج/منشور في خطة الحملة (Loop ×N)</text>
+
+          <!-- Fetch Products (process, no AI) -->
+          <g>
+            <rect class="box procbox" x="502" y="150" width="320" height="56" rx="9"/>
+            <text class="atitle" x="662" y="174" text-anchor="middle">جلب المنتجات — Fetch Products</text>
+            <text class="asub" x="662" y="192" text-anchor="middle">قراءة تفاصيل المنتج من قاعدة البيانات</text>
+          </g>
+
+          <!-- Idea Generating Agent -->
+          <g>
+            <circle class="anum-c" cx="527" cy="268" r="12"/><text class="anum-t" x="527" y="272" text-anchor="middle">2</text>
+            <rect class="box abox" x="502" y="236" width="320" height="64" rx="10"/>
+            <text class="atitle" x="662" y="263" text-anchor="middle">وكيل توليد الأفكار — Idea Generating Agent</text>
+            <text class="asub" x="662" y="283" text-anchor="middle">فكرة/زاوية تسويقية + التريند إن فُعّل</text>
+          </g>
+
+          <!-- Fetch Brand Guidelines (process, no AI) -->
+          <g>
+            <rect class="box procbox" x="502" y="330" width="320" height="56" rx="9"/>
+            <text class="atitle" x="662" y="354" text-anchor="middle">جلب معلومات البراند</text>
+            <text class="asub" x="662" y="372" text-anchor="middle">Brand Agent · analyze_brand() → Brand Guidelines</text>
+          </g>
+
+          <!-- Content Writer Agent -->
+          <g>
+            <circle class="anum-c" cx="527" cy="448" r="12"/><text class="anum-t" x="527" y="452" text-anchor="middle">3</text>
+            <rect class="box abox" x="502" y="416" width="320" height="64" rx="10"/>
+            <text class="atitle" x="662" y="443" text-anchor="middle">وكيل كتابة المحتوى — Content Writer Agent</text>
+            <text class="asub" x="662" y="463" text-anchor="middle">Hook · Caption · CTA · Hashtags</text>
+          </g>
+
+          <!-- Design Agent -->
+          <g>
+            <circle class="anum-c" cx="527" cy="538" r="12"/><text class="anum-t" x="527" y="542" text-anchor="middle">4</text>
+            <rect class="box abox" x="502" y="506" width="320" height="64" rx="10"/>
+            <text class="atitle" x="662" y="533" text-anchor="middle">وكيل التصميم — Design Agent</text>
+            <text class="asub" x="662" y="553" text-anchor="middle">توليد الصورة وتركيبها على قالب البراند</text>
+          </g>
+
+          <!-- Review Agent -->
+          <g>
+            <circle class="anum-c" cx="527" cy="628" r="12"/><text class="anum-t" x="527" y="632" text-anchor="middle">5</text>
+            <rect class="box abox" x="502" y="596" width="320" height="64" rx="10"/>
+            <text class="atitle" x="662" y="623" text-anchor="middle">وكيل المراجعة — Review Agent</text>
+            <text class="asub" x="662" y="643" text-anchor="middle">تقييم جودة النص والتصميم قبل الاعتماد</text>
+          </g>
+
+          <!-- Schedule / Publish (outside loop) -->
+          <g>
+            <circle class="anum-c" cx="505" cy="748" r="12"/><text class="anum-t" x="505" y="752" text-anchor="middle">6</text>
+            <rect class="box abox" x="480" y="716" width="360" height="64" rx="10"/>
+            <text class="atitle" x="660" y="743" text-anchor="middle">وكيل الجدولة — Schedule Agent</text>
+            <text class="asub" x="660" y="763" text-anchor="middle">جدولة المنشور المعتمد أو نشره فورًا على فيسبوك</text>
+          </g>
+        </svg>
+        <div class="figcap">
+          الأسهم <b>الصلبة</b>: تسلسل التنفيذ. الأسهم <b>المتقطّعة</b>: قراءة/كتابة من <b>قاعدة البيانات</b> واستدعاء <b>أداة التريند</b>.
+          الصناديق البيضاء (<b>جلب المنتجات</b> · <b>جلب معلومات البراند</b>) خطوات قراءة بيانات فقط، وليست وكلاء ذكاء اصطناعي.
+          المحتوى داخل الإطار المنقّط <b>يتكرر لكل منتج/منشور</b> ضمن خطة الحملة.
+        </div>
+      </figure>
+
+      <div class="arrow"></div>
+
+      <div class="node" style="border-color:var(--run)">
+        <span class="step" style="background:var(--run)">6</span>
+        <h3>بعد الإنتاج</h3>
+        <p class="desc">عند إنتاج منشور (نص/تصميم) من أيّ من المسارين، أمام المستخدم مساران:</p>
+        <div class="opts">
+          <div class="opt">
+            <span class="lbl">مسار أ</span>
+            <b>جدولة ونشر</b>
+            <p>اعتماد المحتوى وجدولته للنشر على فيسبوك.</p>
+          </div>
+          <div class="opt">
+            <span class="lbl">مسار ب</span>
+            <b>تعديل وملاحظات</b>
+            <p>إضافة تعديلات وملاحظات على المحتوى المولّد قبل اعتماده.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="arrow"></div>
+
+    <!-- PHASE 4 -->
+    <div class="phase">
+      <div class="phase-tag">المرحلة ٤ · التقييم</div>
+
+      <div class="node n-eval">
+        <span class="step">7</span>
+        <h3>التقييم — موديل أو نظام قاعدي</h3>
+        <p class="desc">قياس موضوعي للجودة والمطابقة على أربعة محاور:</p>
+        <div class="checks">
+          <div>مطابقة الكتابة للصورة</div>
+          <div>مطابقة كلٍّ منهما للعلامة التجارية</div>
+          <div>مطابقة خوارزميات النشر الصحيح على فيسبوك</div>
+          <div>تقييم هيكلية النظام كاملة</div>
+        </div>
+      </div>
+
+      <div class="loopback">
+        <span class="ic">↺</span>
+        <span>نتائج التقييم وملاحظات التعديل تعود إلى <b>الذاكرة</b> — فتتحسّن الجولات القادمة (حلقة مغلقة).</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ===================== AGENT GLOSSARY ===================== -->
+  <div class="steps">
+    <h2>شرح تفصيلي لكل عنصر (Agent Glossary)</h2>
+    <div class="gloss">
+      <table class="gtab">
+        <thead><tr><th>العنصر</th><th>النوع</th><th>الوظيفة</th><th>المدخل</th><th>المخرَج</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="who">وكيل التنسيق<br><span class="mut" style="font-weight:400">Orchestrator Agent</span></td>
+            <td><span class="kind k-orch">تحكّم / شات</span></td>
+            <td>يستقبل رسالة المستخدم عبر <code>handle_message()</code>، يصنّف النية ويستخرج الحقول الناقصة، ثم يوجّه لأحد المسارات الثمانية.</td>
+            <td class="mut">رسالة بلغة طبيعية</td>
+            <td class="mut">تنفيذ المسار المناسب / سؤال توضيحي</td>
+          </tr>
+          <tr>
+            <td class="who">وكيل البراند<br><span class="mut" style="font-weight:400">Brand Agent</span></td>
+            <td><span class="kind k-agent">وكيل AI</span></td>
+            <td><code>analyze_brand()</code> — يحلّل هوية البراند (ألوان، طابع، أمثلة سابقة) ويوحّد القواعد لكل الوكلاء اللاحقة.</td>
+            <td class="mut">بيانات البراند + أمثلة</td>
+            <td class="mut">Brand Guidelines (نبرة، قواعد كتابة، ممنوعات)</td>
+          </tr>
+          <tr>
+            <td class="who">وكيل الاستراتيجية<br><span class="mut" style="font-weight:400">Strategy Agent</span></td>
+            <td><span class="kind k-agent">وكيل AI</span></td>
+            <td><code>build_content_strategy()</code> — يبني خطة الحملة: عدد المنشورات، نوع كل منشور، والمنتج المناسب له.</td>
+            <td class="mut">Brand Guidelines + هدف الحملة + المنتجات</td>
+            <td class="mut">خطة منشورات <code>days[]</code></td>
+          </tr>
+          <tr>
+            <td class="who">جلب المنتجات<br><span class="mut" style="font-weight:400">Fetch Products</span></td>
+            <td><span class="kind k-proc">معالجة بيانات</span></td>
+            <td>قراءة مباشرة لتفاصيل كل منتج مُدرَج في الخطة — لا يوجد استدلال ذكاء اصطناعي هنا.</td>
+            <td class="mut">معرّف المنتج من الخطة</td>
+            <td class="mut">سعر / وصف / صورة المنتج</td>
+          </tr>
+          <tr>
+            <td class="who">وكيل توليد الأفكار<br><span class="mut" style="font-weight:400">Idea Generating Agent</span></td>
+            <td><span class="kind k-agent">وكيل AI</span></td>
+            <td>توسعة لوكيل تحليل المنتج الحالي (<code>analyze_product()</code>) — يستخرج الزاوية التسويقية، ويدمج التريند الرائج إن كان مفعّلاً بالحملة.</td>
+            <td class="mut">بيانات المنتج + Brand Guidelines + تريند (اختياري)</td>
+            <td class="mut">فكرة/زاوية + نوع منشور مقترح + مزاج بصري</td>
+          </tr>
+          <tr>
+            <td class="who">جلب معلومات البراند<br><span class="mut" style="font-weight:400">Fetch Brand Guidelines</span></td>
+            <td><span class="kind k-proc">معالجة بيانات</span></td>
+            <td>يسترجع Brand Guidelines من الذاكرة/الجلسة إن كانت محسوبة مسبقًا، أو يستدعي Brand Agent لحسابها من جديد.</td>
+            <td class="mut">معرّف البراند</td>
+            <td class="mut">Brand Guidelines</td>
+          </tr>
+          <tr>
+            <td class="who">وكيل كتابة المحتوى<br><span class="mut" style="font-weight:400">Content Writer Agent</span></td>
+            <td><span class="kind k-agent">وكيل AI</span></td>
+            <td><code>write_post_content()</code> — يكتب نص المنشور كاملاً وفق الفكرة وقواعد البراند.</td>
+            <td class="mut">الفكرة + Brand Guidelines</td>
+            <td class="mut">hook · caption · cta · hashtags[]</td>
+          </tr>
+          <tr>
+            <td class="who">وكيل التصميم<br><span class="mut" style="font-weight:400">Design Agent</span></td>
+            <td><span class="kind k-agent">وكيل AI</span></td>
+            <td><code>create_design()</code> — يبني Image Prompt، يولّد الصورة، ويركّبها على قالب البراند.</td>
+            <td class="mut">الفكرة/المنتج + Brand Guidelines + القالب</td>
+            <td class="mut">صورة نهائية مركّبة</td>
+          </tr>
+          <tr>
+            <td class="who">وكيل المراجعة<br><span class="mut" style="font-weight:400">Review Agent</span></td>
+            <td><span class="kind k-agent">وكيل AI</span></td>
+            <td><code>review_post()</code> — يقيّم النص والتصميم وفق 5 معايير ويقرّر الموافقة المبدئية.</td>
+            <td class="mut">النص + التصميم + Brand Guidelines</td>
+            <td class="mut">درجات + approved + ملاحظات</td>
+          </tr>
+          <tr>
+            <td class="who">وكيل الجدولة<br><span class="mut" style="font-weight:400">Schedule Agent</span></td>
+            <td><span class="kind k-agent">وكيل AI</span></td>
+            <td><code>schedule_post()</code> — يحوّل وقتًا نصيًا لتنسيق ISO، ويحفظ المنشور المعتمد مجدولاً أو ينشره فورًا.</td>
+            <td class="mut">منشور معتمد + وقت النشر (اختياري)</td>
+            <td class="mut">سجل في <code>scheduled_posts</code> أو نشر مباشر</td>
+          </tr>
+          <tr>
+            <td class="who">أداة التريند<br><span class="mut" style="font-weight:400">Trend Tool</span></td>
+            <td><span class="kind k-svc">خدمة خارجية</span></td>
+            <td><code>fetch_trends()</code> — يجلب المواضيع/الهاشتاقات الرائجة لمجال البراند لتغذية وكيل توليد الأفكار. ⚠️ placeholder حاليًا بالكود.</td>
+            <td class="mut">مجال البراند (niche)</td>
+            <td class="mut">قائمة تريندات (عنوان + درجة رواج)</td>
+          </tr>
+          <tr>
+            <td class="who">قاعدة البيانات<br><span class="mut" style="font-weight:400">Database</span></td>
+            <td><span class="kind k-svc">خدمة مشتركة</span></td>
+            <td>تخزّن البراندات والمنتجات والمنشورات المولّدة والمجدولة، وتُقرأ/تُكتَب من كل الوكلاء أعلاه.</td>
+            <td class="mut">—</td>
+            <td class="mut">products · brands · generated_posts · scheduled_posts</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="callout">
+    <b>ملاحظة:</b> الخطوات <b>٣ (موديل تعلّم النمط)</b>، <b>٢ب (ربط فيسبوك عبر API)</b>، و<b>وكيل توليد الأفكار</b> (توسعة لوكيل تحليل المنتج الحالي)
+    هي التوسعة الأساسية عن النظام الحالي. باقي البنية — الوكلاء الستة، الأوركستريتور بنيّاته الثماني، وقاعدة البيانات —
+    مطابقة لِما هو موجود بالكود فعليًا، وهذا المخطط يمثّل <b>الرؤية الكاملة المستهدفة</b>.
+  </div>
+
+  <!-- Steps text -->
+  <div class="steps">
+    <h2>وصف الخطوات</h2>
+    <ol class="sl">
+      <li>يُدخِل المستخدم <b>هوية البراند</b> (الألوان، الطابع، اللوغو/التيمبليت).</li>
+      <li><b>(اختياري)</b> استيراد المنشورات السابقة — يدويًا أو عبر <b>ربط فيسبوك (API)</b> بإذن المستخدم.</li>
+      <li><b>موديل تعلّم النمط</b> يحلّل المنشورات (نموذج نصّ + نموذج صورة) ويُنتج <b>النمط المستخرَج</b>.</li>
+      <li>تُخزَّن في <b>الذاكرة</b>: النمط + بيانات البراند + الفيدباك/نتائج التقييم — كمصدر مشترك للمراحل التالية.</li>
+      <li>يختار المستخدم أحد مسارَين بديلَين:
+        <br>• <b>مسار أ · مساعد ذكي</b>: Orchestrator يصنّف النية ويوجّه لأحد ٨ نيّات (WRITE_POST, CREATE_DESIGN, WRITE_AND_DESIGN, REVIEW, GET_STRATEGY, GET_TRENDS, SCHEDULE_POST, FULL_PIPELINE).
+        <br>• <b>مسار ب · حملة إعلانية</b> (أو نية FULL_PIPELINE): إعداد (هدف + منتجات + تريند) ثم Strategy Agent، فحلقة لكل منتج/منشور: جلب المنتجات ← توليد الأفكار (+تريند) ← جلب معلومات البراند ← كتابة المحتوى ← التصميم ← المراجعة، ثم Schedule Agent.</li>
+      <li>بعد الإنتاج: <b>جدولة ونشر</b>، أو <b>تعديل وملاحظات</b> على المحتوى قبل اعتماده.</li>
+      <li><b>التقييم</b> يقيس مطابقة النص↔الصورة، ومطابقة كلٍّ منهما للعلامة، ومطابقة خوارزميات فيسبوك، وهيكلية النظام —
+        ثم <b>تعود النتائج إلى الذاكرة</b>.</li>
+    </ol>
+  </div>
+</div>
+
+<script>
+  (function(){
+    var btn=document.getElementById('themebtn'), root=document.documentElement;
+    function cur(){var t=root.getAttribute('data-theme');return t?t:(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');}
+    function apply(t){root.setAttribute('data-theme',t);btn.textContent=t==='dark'?'☀️ الوضع النهاري':'🌙 الوضع الليلي';}
+    apply(cur());
+    btn.addEventListener('click',function(){apply(cur()==='dark'?'light':'dark');});
+  })();
+</script>
+</body>
+</html>

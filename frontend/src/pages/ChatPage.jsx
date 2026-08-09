@@ -1,17 +1,19 @@
 import { useState, useRef, useEffect } from 'react'
-import { Send, Bot, User, Sparkles, Image as ImageIcon, FileText } from 'lucide-react'
+import { Send, Bot, User, Sparkles, Image as ImageIcon, FileText, RotateCcw, History, MessageSquare, Plus, Trash2 } from 'lucide-react'
 import clsx from 'clsx'
 import useStore from '../store'
 import { sendChatMessage } from '../api/client'
+import ImageLightbox from '../components/ImageLightbox'
 
 const EXAMPLES = [
   'صمّم صورة لمنتج HOCO',
   'اكتب منشور عن لابتوب ASUS',
+  'ما هي التريندات الرائجة؟',
   'اعمل خطة 7 أيام',
 ]
 
 // ── عرض نتيجة التنفيذ بشكل جميل حسب نوعها ────────────────────────────────────
-function ResultCard({ data }) {
+function ResultCard({ data, onZoom }) {
   if (!data) return null
   const design = data.design || (data.image_url ? data : null)
   const imgUrl = design?.image_url
@@ -23,6 +25,29 @@ function ResultCard({ data }) {
     return (
       <div className="mt-2 text-sm bg-primary-50 rounded-xl p-3 text-primary-800">
         📅 {data.message}
+      </div>
+    )
+  }
+
+  // جدولة منشور
+  if (data.scheduled_id !== undefined) {
+    return (
+      <div className="mt-2 text-sm bg-green-50 rounded-xl p-3 text-green-800">
+        🗓️ {data.message} <span className="opacity-70">— يظهر الآن في قسم «المجدولة»</span>
+      </div>
+    )
+  }
+
+  // تريندات (فارغ حالياً)
+  if (data.trends !== undefined) {
+    return (
+      <div className="mt-2 text-sm bg-amber-50 rounded-xl p-3 text-amber-800">
+        📈 {data.note || 'التريندات الرائجة'}
+        {Array.isArray(data.trends) && data.trends.length > 0 && (
+          <ul className="mt-1 list-disc pr-5">
+            {data.trends.map((t, i) => <li key={i}>{t.title || JSON.stringify(t)}</li>)}
+          </ul>
+        )}
       </div>
     )
   }
@@ -53,7 +78,8 @@ function ResultCard({ data }) {
             <ImageIcon size={13} /> التصميم
           </div>
           {isImg
-            ? <img src={imgUrl} alt="التصميم" className="rounded-lg max-h-72 w-auto border border-gray-200" />
+            ? <img src={imgUrl} alt="التصميم" onClick={() => onZoom?.(imgUrl)}
+                className="rounded-lg max-h-72 w-auto border border-gray-200 cursor-zoom-in hover:opacity-90 transition-opacity" />
             : <p className="text-gray-500 text-xs">وصف الصورة: {design.image_prompt || imgUrl || '—'}</p>}
         </div>
       )}
@@ -67,26 +93,34 @@ function ResultCard({ data }) {
 }
 
 export default function ChatPage() {
-  const { user, activeBrandId } = useStore()
+  const {
+    user, activeBrandId,
+    conversations, activeId,
+    newConversation, switchConversation, deleteConversation,
+    updateActiveMessages: setMessages, setActiveSessionId: setSessionId,
+  } = useStore()
   const userId = user?.id ?? 1
   const brandId = activeBrandId ?? 1
 
-  const [messages, setMessages] = useState([
-    { role: 'agent', text: 'مرحباً! 👋 أنا مساعدك التسويقي لفيسبوك. اطلب مني كتابة منشور، تصميم صورة، مراجعة نص، أو إنشاء خطة محتوى.' },
-  ])
+  const active = conversations.find(c => c.id === activeId) || conversations[0]
+  const messages = active?.messages || []
+  const sessionId = active?.sessionId || null
+
   const [input, setInput] = useState('')
-  const [sessionId, setSessionId] = useState(null)
   const [loading, setLoading] = useState(false)
   const [dryRun, setDryRun] = useState(false)
+  const [zoom, setZoom] = useState(null)
+  const [showConvos, setShowConvos] = useState(false)
   const endRef = useRef(null)
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages, loading])
 
-  async function send(text) {
+  // text = القيمة المُرسَلة للخادم · displayText = ما يظهر في فقاعة المستخدم
+  async function send(text, displayText) {
     const msg = (text ?? input).trim()
     if (!msg || loading) return
     setInput('')
-    setMessages(m => [...m, { role: 'user', text: msg }])
+    setMessages(m => [...m, { role: 'user', text: displayText ?? msg }])
     setLoading(true)
     try {
       const { data } = await sendChatMessage({
@@ -105,7 +139,7 @@ export default function ChatPage() {
     }
   }
 
-  // نص القيمة المُرسَلة عند الضغط على خيار (منتج مثلاً)
+  // القيمة المُرسَلة للخادم عند الضغط على خيار (منتج مثلاً) — تبقى id للخادم
   const optionMessage = (o) =>
     o.value?.product_id !== undefined ? `product_id:${o.value.product_id}` : (o.label || '')
 
@@ -122,10 +156,46 @@ export default function ChatPage() {
             <p className="text-xs text-gray-400">فيسبوك · user #{userId} · brand #{brandId}</p>
           </div>
         </div>
-        <label className="flex items-center gap-2 text-xs text-gray-500 cursor-pointer">
-          <input type="checkbox" checked={dryRun} onChange={e => setDryRun(e.target.checked)} />
-          وضع تجريبي (بلا توليد فعلي)
-        </label>
+        <div className="flex items-center gap-3">
+          {/* قائمة سجل المحادثات */}
+          <div className="relative">
+            <button onClick={() => setShowConvos(s => !s)}
+              className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-primary-600 border border-gray-200 rounded-lg px-3 py-1.5 transition-colors"
+              title="سجل المحادثات">
+              <History size={14} /> المحادثات ({conversations.length})
+            </button>
+            {showConvos && (
+              <div className="absolute left-0 mt-2 w-72 bg-white border border-gray-200 rounded-xl shadow-lg z-20 p-2 max-h-96 overflow-y-auto">
+                <button onClick={() => { newConversation(); setShowConvos(false) }}
+                  className="w-full flex items-center gap-2 text-sm text-primary-600 hover:bg-primary-50 rounded-lg px-3 py-2 mb-1 font-medium">
+                  <Plus size={15} /> محادثة جديدة
+                </button>
+                {conversations.map(c => (
+                  <div key={c.id}
+                    className={clsx('group flex items-center gap-2 rounded-lg px-3 py-2 cursor-pointer',
+                      c.id === activeId ? 'bg-primary-50 text-primary-700' : 'hover:bg-gray-50 text-gray-700')}
+                    onClick={() => { switchConversation(c.id); setShowConvos(false) }}>
+                    <MessageSquare size={14} className="flex-shrink-0 opacity-60" />
+                    <span className="flex-1 truncate text-sm">{c.title}</span>
+                    <button onClick={(e) => { e.stopPropagation(); deleteConversation(c.id) }}
+                      className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-all" title="حذف">
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <button onClick={() => newConversation()}
+            className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-primary-600 transition-colors"
+            title="بدء محادثة جديدة">
+            <RotateCcw size={14} /> جديدة
+          </button>
+          <label className="flex items-center gap-2 text-xs text-gray-500 cursor-pointer">
+            <input type="checkbox" checked={dryRun} onChange={e => setDryRun(e.target.checked)} />
+            وضع تجريبي
+          </label>
+        </div>
       </div>
 
       {/* Messages */}
@@ -145,7 +215,7 @@ export default function ChatPage() {
                 {m.options?.length > 0 && (
                   <div className="flex flex-wrap gap-2 mt-3">
                     {m.options.map((o, j) => (
-                      <button key={j} onClick={() => send(optionMessage(o))}
+                      <button key={j} onClick={() => send(optionMessage(o), o.label)}
                         className="text-xs bg-primary-50 text-primary-700 hover:bg-primary-100 border border-primary-200 rounded-lg px-3 py-1.5 font-medium transition-colors">
                         {o.label}
                       </button>
@@ -154,7 +224,7 @@ export default function ChatPage() {
                 )}
 
                 {/* نتيجة التنفيذ */}
-                {m.data && <ResultCard data={m.data} />}
+                {m.data && <ResultCard data={m.data} onZoom={setZoom} />}
               </div>
             </div>
           ))}
@@ -206,6 +276,8 @@ export default function ChatPage() {
           </div>
         </div>
       </div>
+
+      <ImageLightbox src={zoom} onClose={() => setZoom(null)} />
     </div>
   )
 }

@@ -8,6 +8,7 @@ from api.schemas import ProductCreate, ProductOut
 from database.models import Product
 from database.session import get_db
 from config import settings
+from tools.product_import import parse_products_xlsx
 
 router = APIRouter(prefix="/products", tags=["products"])
 
@@ -22,6 +23,39 @@ def create_product(user_id: int, payload: ProductCreate, db: Session = Depends(g
     db.commit()
     db.refresh(product)
     return product
+
+
+@router.post("/bulk-upload")
+async def bulk_upload_products(
+    user_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+):
+    """
+    رفع ملف Excel (.xlsx) لإضافة عدة منتجات دفعة واحدة، مع دعم صور متعددة لكل منتج
+    (روابط في عمود «الصور» مفصولة بـ «|»).
+    """
+    fname = (file.filename or "").lower()
+    if not fname.endswith((".xlsx", ".xlsm")):
+        raise HTTPException(400, "الرجاء رفع ملف Excel بصيغة .xlsx")
+
+    content = await file.read()
+    products, errors = parse_products_xlsx(content)
+
+    created = 0
+    for p in products:
+        db.add(Product(user_id=user_id, **p))
+        created += 1
+    if created:
+        db.commit()
+
+    return {
+        "created": created,
+        "skipped": 0,
+        "errors": errors,
+        "message": (f"تمت إضافة {created} منتجاً بنجاح ✅"
+                    if created else "لم تتم إضافة أي منتج."),
+    }
 
 
 @router.get("/{product_id}", response_model=ProductOut)

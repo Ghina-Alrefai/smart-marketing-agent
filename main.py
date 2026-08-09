@@ -10,7 +10,7 @@ from pathlib import Path
 
 from config import settings
 from database.session import init_db
-from api.routers import users, brands, products, plans, chat
+from api.routers import users, brands, products, plans, chat, scheduled, events
 
 # ── Init DB on startup ─────────────────────────────────────────────────────
 init_db()
@@ -42,6 +42,8 @@ app.include_router(brands.router, prefix="/api/v1")
 app.include_router(products.router, prefix="/api/v1")
 app.include_router(plans.router, prefix="/api/v1")
 app.include_router(chat.router, prefix="/api/v1")
+app.include_router(scheduled.router, prefix="/api/v1")
+app.include_router(events.router, prefix="/api/v1")
 
 # ── Serve React frontend build ─────────────────────────────────────────────
 _frontend_dist = Path(__file__).parent / "frontend" / "dist"

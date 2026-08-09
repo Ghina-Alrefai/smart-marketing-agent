@@ -69,7 +69,10 @@ class Product(Base):
     price       = Column(Float)
     category    = Column(String(100))
     image_url   = Column(String(500))
+    image_urls  = Column(JSON, default=list)       # صور متعددة للمنتج (روابط)
+    source_url  = Column(String(500))              # رابط صفحة المنتج الأصلية (اختياري)
     post_count  = Column(Integer, default=0)
+    is_marketed = Column(Boolean, default=False)   # هل سُوّق له سابقاً؟
     created_at  = Column(DateTime, default=datetime.utcnow)
 
     user = relationship("User", back_populates="products")
@@ -83,7 +86,15 @@ class ContentPlan(Base):
     campaign_name = Column(String(200))
     start_date    = Column(DateTime)
     days          = Column(Integer, default=7)
-    campaign_goal = Column(String(200))
+    campaign_goal = Column(String(200))                    # يبقى للتوافق الخلفي (أول هدف)
+    campaign_goals  = Column(JSON, default=list)           # أهداف متعددة للحملة
+    product_ids     = Column(JSON, default=list)           # المنتجات المختارة (فارغ = كل المنتجات)
+    selected_events = Column(JSON, default=list)           # المناسبات المختارة ضمن مدة الحملة
+    include_trends  = Column(Boolean, default=False)       # هل نضمّن التريندات؟
+    selected_trends = Column(JSON, default=list)           # التريندات المختارة (سياق الحملة)
+    mode            = Column(String(20), default="campaign")  # campaign (المعمارية الجديدة) | legacy
+    strategy        = Column(JSON, default=dict)           # مخرَج Strategy Agent المهيكل
+    campaign_data   = Column(JSON, default=dict)           # كائن الحملة الموحّد النهائي
     status        = Column(String(50), default="pending")
     created_at    = Column(DateTime, default=datetime.utcnow)
 
@@ -96,6 +107,9 @@ class GeneratedPost(Base):
     id              = Column(Integer, primary_key=True, index=True)
     content_plan_id = Column(Integer, ForeignKey("content_plans.id"), nullable=False)
     product_id      = Column(Integer, ForeignKey("products.id"), nullable=True)
+    post_id         = Column(String(50))       # المعرّف الأساسي الثابت للبوست (post_001...) عبر كل المراحل
+    idea            = Column(JSON, default=dict)  # الفكرة القانونية المشتركة (مصدر الحقيقة الوحيد للبوست)
+    design          = Column(JSON, default=dict)  # مخرَج Design Agent المهيكل
     day_number      = Column(Integer)
     post_type       = Column(String(100))
     post_goal       = Column(String(200))
@@ -113,3 +127,20 @@ class GeneratedPost(Base):
 
     content_plan = relationship("ContentPlan",  back_populates="posts")
     product      = relationship("Product")
+
+
+class ScheduledPost(Base):
+    """منشور مجدول للنشر في وقت محدد — يظهر في قسم «المجدولة»."""
+    __tablename__ = "scheduled_posts"
+    id           = Column(Integer, primary_key=True, index=True)
+    user_id      = Column(Integer, ForeignKey("users.id"), nullable=False)
+    generated_post_id = Column(Integer, ForeignKey("generated_posts.id"), nullable=True)  # ربط بمنشور الحملة (للجدولة التلقائية)
+    hook         = Column(Text)
+    caption      = Column(Text)
+    cta          = Column(Text)
+    hashtags     = Column(JSON, default=list)
+    image_url    = Column(String(500))
+    scheduled_at = Column(DateTime, nullable=True)     # الوقت المحلَّل
+    time_text    = Column(String(200))                 # النص الأصلي كما كتبه المستخدم
+    status       = Column(String(50), default="scheduled")  # scheduled | published | cancelled
+    created_at   = Column(DateTime, default=datetime.utcnow)

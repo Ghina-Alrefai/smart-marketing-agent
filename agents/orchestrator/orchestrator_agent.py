@@ -15,7 +15,7 @@ import threading
 
 from agents.orchestrator import session_store as store
 from agents.orchestrator.intent_classifier import classify_intent
-from agents.orchestrator.entity_extractor import extract_entities, detect_days
+from agents.orchestrator.entity_extractor import extract_entities, detect_days, parse_schedule_time
 from tools.db_tools import get_products, get_product, get_brand
 
 # ── تعريف الحقول المطلوبة لكل نية ────────────────────────────────────────────
@@ -26,6 +26,9 @@ REQUIRED = {
     "REVIEW": ["review_text"],
     "GET_STRATEGY": [],
     "FULL_PIPELINE": ["days"],
+    "CREATE_CAMPAIGN": ["days"],
+    "GET_TRENDS": [],
+    "SCHEDULE_POST": ["schedule_time"],
 }
 NEEDS_PRODUCT = {"WRITE_POST", "CREATE_DESIGN", "WRITE_AND_DESIGN"}
 NEEDS_IMAGE = {"CREATE_DESIGN", "WRITE_AND_DESIGN"}
@@ -33,7 +36,53 @@ NEEDS_IMAGE = {"CREATE_DESIGN", "WRITE_AND_DESIGN"}
 _SLOT_QUESTION = {
     "days": "كم يوماً تريد أن تغطّي الخطة؟ (مثلاً 7)",
     "review_text": "الصق النص الذي تريد مني مراجعته.",
+    "schedule_time": "متى تريد نشر المنشور؟ (مثلاً: غداً الساعة 8، أو 2026-08-05 18:00)",
 }
+
+
+# ── نصوص تفاعلية ─────────────────────────────────────────────────────────────
+_GREETING_MESSAGE = (
+    "أهلاً وسهلاً! 👋 أنا مساعدك التسويقي الذكي لفيسبوك. أقدر أساعدك بـ:\n"
+    "✍️ كتابة منشور احترافي لأي منتج\n"
+    "🎨 تصميم صورة تسويقية جاهزة للنشر\n"
+    "📝 كتابة منشور + تصميم معاً\n"
+    "🔎 مراجعة وتقييم نص جاهز\n"
+    "🧭 اقتراح أفضل منتج/استراتيجية للنشر\n"
+    "📈 عرض التريندات والمواضيع الرائجة\n"
+    "🚀 إنشاء حملة تسويقية كاملة\n"
+    "🗓️ جدولة المنشورات في وقت محدد\n\n"
+    "شو حابّة نبدأ فيه؟ 😊"
+)
+
+
+def _product_name(pid) -> str:
+    if not pid:
+        return ""
+    p = get_product(pid)
+    return p.get("title", "") if p else ""
+
+
+def _success_message(session, intent) -> str:
+    """رسالة نجاح تفاعلية ومحدّدة بحسب النية والمنتج (لا «تم ✅» فقط)."""
+    name = _product_name(session.slots.get("product_id"))
+    who = f"للمنتج «{name}»" if name else ""
+    if intent == "WRITE_POST":
+        return f"تمام! ✍️ كتبتلك منشوراً {who} كما طلبت. تحبّي أصمّم له صورة كمان؟".replace("  ", " ")
+    if intent == "CREATE_DESIGN":
+        return f"تفضّلي! 🎨 صمّمتلك صورة {who} كما طلبت.".replace("  ", " ")
+    if intent == "WRITE_AND_DESIGN":
+        return f"جاهز! 📝🎨 كتبتلك منشوراً وصمّمت صورة {who} كما طلبت.".replace("  ", " ")
+    if intent == "REVIEW":
+        return "خلّصت المراجعة 🔎 تحت التفاصيل والملاحظات."
+    if intent == "GET_STRATEGY":
+        return "جهّزتلك اقتراح الاستراتيجية 🧭 شوفي التفاصيل تحت."
+    if intent == "GET_TRENDS":
+        return "هي أبرز التريندات الرائجة 📈"
+    if intent == "SCHEDULE_POST":
+        return "تمام! 🗓️ جدولت المنشور، وبيظهر بقسم «المجدولة»."
+    if intent in ("FULL_PIPELINE", "CREATE_CAMPAIGN"):
+        return "انطلقت الحملة! 🚀 عم أشتغل عليها بالخلفية، تابعي التقدّم بصفحة «الحملات»."
+    return "تم بنجاح ✅"
 
 
 # ── ردود موحّدة ──────────────────────────────────────────────────────────────
@@ -133,6 +182,12 @@ def _apply_answer(session, user_id, message):
     elif slot == "review_text":
         session.slots["review_text"] = message.strip()
         session.awaiting = None
+    elif slot == "schedule_time":
+        iso = parse_schedule_time(message)
+        if iso:
+            session.slots["schedule_time"] = iso
+            session.slots["schedule_time_text"] = message.strip()
+            session.awaiting = None
 
 
 # ── الدالة الرئيسية ──────────────────────────────────────────────────────────
@@ -159,6 +214,9 @@ def handle_message(user_id: int, brand_id: int, message: str,
             session.slots["days"] = ents["days"]
         if ents.get("post_type"):
             session.slots["post_type"] = ents["post_type"]
+        if ents.get("schedule_time"):
+            session.slots["schedule_time"] = ents["schedule_time"]
+            session.slots["schedule_time_text"] = message.strip()
         if ents.get("review_text"):
             session.slots["review_text"] = ents["review_text"]
         if ents.get("product_name"):
@@ -167,12 +225,30 @@ def handle_message(user_id: int, brand_id: int, message: str,
                 session.slots["product_id"] = pid
             else:
                 session.slots["_product_name_hint"] = ents["product_name"]
+        # تضمين التريند في الحملة إن ذُكر صراحةً
+        if session.intent == "CREATE_CAMPAIGN":
+            t = message.lower()
+            if any(w in t for w in ("تريند", "ترند", "رائج", "trend")):
+                session.slots["include_trends"] = True
+
+    # التحية / طلب المساعدة — ردّ ودّي تفاعلي
+    if session.intent == "GREETING":
+        session.clear_task()
+        return _resp(session, "info", _GREETING_MESSAGE)
 
     if session.intent in (None, "UNKNOWN"):
         session.clear_task()
         return _resp(session, "info",
-                     "لم أفهم طلبك تماماً 🤔 تقدر تطلب مثلاً: «اكتب منشور إنستغرام عن كذا»، "
-                     "«صمّم صورة لمنتج كذا»، «راجع هذا النص»، أو «اعمل خطة 7 أيام».")
+                     "لم أفهم طلبك تماماً 🤔 بس ولا يهمّك! تقدر تطلب مثلاً:\n"
+                     "• «اكتب منشور عن كذا»\n• «صمّم صورة لمنتج كذا»\n"
+                     "• «راجع هذا النص»\n• «ما هي التريندات الرائجة؟»\n"
+                     "• «اعمل حملة كاملة»\n• «جدول المنشور غداً»")
+
+    # منع الجدولة بلا منشور جاهز في الجلسة
+    if session.intent == "SCHEDULE_POST" and not session.cache.get("last_post"):
+        session.clear_task()
+        return _resp(session, "info",
+                     "لا يوجد منشور جاهز لجدولته. اكتب منشوراً أولاً (مثلاً «اكتب منشور عن ...») ثم اطلب جدولته.")
 
     # (3) حلّ المنتج إن كانت النية تحتاجه
     if session.intent in NEEDS_PRODUCT and not session.slots.get("product_id"):
@@ -198,8 +274,9 @@ def handle_message(user_id: int, brand_id: int, message: str,
         return _resp(session, "error", f"حدث خطأ أثناء التنفيذ: {exc}")
 
     intent_done = session.intent
+    done_msg = _success_message(session, intent_done)
     session.clear_task()
-    return _resp(session, "result", "تم ✅", executed=intent_done, data=result)
+    return _resp(session, "result", done_msg, executed=intent_done, data=result)
 
 
 # ── التنفيذ: استدعاء الوكلاء الموجودين (بلا تعديل) ───────────────────────────
@@ -215,6 +292,63 @@ def _brand_guidelines(session, brand_id, dry_run):
     return g
 
 
+def _wad_via_idea(guidelines: dict, product_analysis: dict, pid: int,
+                  skip_image: bool, dry_run: bool) -> dict:
+    """
+    WRITE_AND_DESIGN عبر آلية الحملة الموحّدة (اقتراح E):
+    فكرة قانونية واحدة (post_count=1) تُمرَّر لكاتب المحتوى والمصمّم معاً،
+    فيضمن أن النص والصورة يعبّران عن *نفس* المفهوم — تماماً كالحملة الكاملة.
+    """
+    if dry_run:
+        idea = {"concept": "(stub) فكرة موحّدة", "main_message": "(stub) رسالة",
+                "visual_direction": "(stub) اتجاه بصري متّسق"}
+        return {"hook": "(stub) خطّاف", "caption": "(stub) نص المنشور", "cta": "اطلب الآن",
+                "hashtags": ["#تجريبي"], "idea": idea,
+                "design": {"image_url": "(stub).png", "design_prompt": "(stub) prompt",
+                           "visual_concept": idea["visual_direction"]},
+                "review": {"approved": True, "notes": "(stub)"}}
+
+    from workflows.campaign_pipeline import _build_brand_guide
+    from agents.idea.idea_agent import generate_post_ideas
+    from agents.content.content_agent import write_content_for_idea
+    from agents.design.design_agent import design_for_idea
+    from agents.review.review_agent import review_post
+
+    brand_guide = _build_brand_guide(guidelines)
+    prod = get_product(pid) or {}
+    product_ctx = {
+        "id": pid, "name": prod.get("title", ""), "description": prod.get("description", ""),
+        "price": prod.get("price"), "category": prod.get("category", ""),
+        "image_url": "" if skip_image else prod.get("image_url", ""),
+        "analysis": product_analysis,
+    }
+    # استراتيجية مصغّرة لبوست واحد (يحتاجها وكيل الأفكار كسياق)
+    strategy = {"campaign_objective": "زيادة المبيعات", "main_message": "",
+                "content_pillars": [], "recommended_post_count": 1}
+
+    ideas = generate_post_ideas(strategy, [product_ctx], brand_guide, [], post_count=1)
+    idea_post = (ideas.get("posts") or [{}])[0]
+
+    content = write_content_for_idea(idea_post, product_ctx, brand_guide)
+    design = design_for_idea(idea_post, content, product_ctx, brand_guide)
+
+    review = review_post(
+        brand_guidelines=json.dumps(guidelines, ensure_ascii=False),
+        hook=content.get("hook", ""), caption=content.get("caption", ""),
+        cta=content.get("cta", ""),
+        hashtags=json.dumps(content.get("hashtags", []), ensure_ascii=False),
+        image_prompt=design.get("design_prompt", ""))
+
+    return {
+        "hook": content.get("hook", ""), "caption": content.get("caption", ""),
+        "cta": content.get("cta", ""), "hashtags": content.get("hashtags", []),
+        "idea": idea_post.get("idea", {}),
+        # نضيف image_url (اسم يفهمه الشات) بجانب image من مخرَج design_for_idea
+        "design": {**design, "image_url": design.get("image", "")},
+        "review": review,
+    }
+
+
 def _execute(session, user_id, brand_id, dry_run) -> dict:
     intent = session.intent
     slots = session.slots
@@ -226,6 +360,17 @@ def _execute(session, user_id, brand_id, dry_run) -> dict:
         from agents.review.review_agent import review_post
         return review_post(brand_guidelines="{}", hook="", caption=slots["review_text"],
                            cta="", hashtags="[]", image_prompt="")
+
+    if intent == "GET_TRENDS":
+        from agents.trends.trends_agent import fetch_trends
+        niche = "" if dry_run else (get_brand(brand_id) or {}).get("business_description", "")
+        return fetch_trends(niche)
+
+    if intent == "SCHEDULE_POST":
+        from agents.scheduling.scheduling_agent import schedule_post
+        last = session.cache.get("last_post", {})
+        return schedule_post(user_id, last, slots.get("schedule_time"),
+                             slots.get("schedule_time_text", ""), dry_run)
 
     guidelines = _brand_guidelines(session, brand_id, dry_run)
     g_json = json.dumps(guidelines, ensure_ascii=False)
@@ -239,8 +384,9 @@ def _execute(session, user_id, brand_id, dry_run) -> dict:
                                       days=slots.get("days", 3),
                                       campaign_goal="زيادة المبيعات")
 
-    if intent == "FULL_PIPELINE":
-        return _launch_pipeline(user_id, brand_id, slots.get("days", 7), dry_run)
+    # الحملة الكاملة (خطة/حملة) — كلاهما يستخدم campaign_pipeline الموحّد
+    if intent in ("FULL_PIPELINE", "CREATE_CAMPAIGN"):
+        return _launch_campaign(session, user_id, brand_id, slots, dry_run)
 
     # المسارات التي تحتاج تحليل منتج: WRITE_POST / CREATE_DESIGN / WRITE_AND_DESIGN
     if dry_run:
@@ -251,7 +397,18 @@ def _execute(session, user_id, brand_id, dry_run) -> dict:
     pa_json = json.dumps(product_analysis, ensure_ascii=False)
     out: dict = {}
 
-    if intent in ("WRITE_POST", "WRITE_AND_DESIGN"):
+    # WRITE_AND_DESIGN → عبر آلية الحملة نفسها (فكرة قانونية واحدة تضمن اتساق النص والصورة)
+    if intent == "WRITE_AND_DESIGN":
+        out = _wad_via_idea(guidelines, product_analysis, pid,
+                            bool(slots.get("skip_image")), dry_run)
+        session.cache["last_post"] = {
+            "hook": out.get("hook", ""), "caption": out.get("caption", ""),
+            "cta": out.get("cta", ""), "hashtags": out.get("hashtags", []),
+            "image_url": (out.get("design") or {}).get("image_url", ""),
+        }
+        return out
+
+    if intent == "WRITE_POST":
         if dry_run:
             content = {"hook": "(stub) خطّاف", "caption": "(stub) نص المنشور",
                        "cta": "اطلب الآن", "hashtags": ["#تجريبي"]}
@@ -274,7 +431,7 @@ def _execute(session, user_id, brand_id, dry_run) -> dict:
                 cta=out.get("cta", ""), hashtags=json.dumps(out.get("hashtags", []), ensure_ascii=False),
                 image_prompt="")
 
-    if intent in ("CREATE_DESIGN", "WRITE_AND_DESIGN"):
+    if intent == "CREATE_DESIGN":
         product = get_product(pid) if pid else {}
         if dry_run:
             out["design"] = {"image_url": "(stub).png", "image_prompt": "(stub) prompt"}
@@ -290,26 +447,51 @@ def _execute(session, user_id, brand_id, dry_run) -> dict:
                 product_image_url="" if slots.get("skip_image") else product.get("image_url", ""),
                 post_type=slots.get("post_type", "promotional"))
 
+    # نحفظ آخر منشور في الجلسة لتتمكّن نية الجدولة من استخدامه لاحقاً
+    session.cache["last_post"] = {
+        "hook": out.get("hook", ""), "caption": out.get("caption", ""),
+        "cta": out.get("cta", ""), "hashtags": out.get("hashtags", []),
+        "image_url": (out.get("design") or {}).get("image_url", "") if isinstance(out.get("design"), dict) else "",
+    }
     return out
 
 
-def _launch_pipeline(user_id, brand_id, days, dry_run) -> dict:
-    """ينشئ خطة ويشغّل الـ Pipeline الموجود في الخلفية — بلا تعديل عليه."""
+def _launch_campaign(session, user_id, brand_id, slots, dry_run) -> dict:
+    """
+    ينشئ خطة حملة (بالمعمارية الجديدة) ويشغّل campaign_pipeline في الخلفية.
+    يجمع إعداد الحملة: المنتجات (المختار أو الكل)، الأهداف، الأيام، وتضمين التريند.
+    """
+    days = slots.get("days", 7)
+    product_ids = [slots["product_id"]] if slots.get("product_id") else []
+    include_trends = bool(slots.get("include_trends"))
+    goals = slots.get("goals") or ["زيادة المبيعات"]
+
     if dry_run:
-        return {"plan_id": 0, "days": days,
-                "status": "stub", "message": f"(تجريبي) خطة {days} أيام"}
+        return {"plan_id": 0, "days": days, "mode": "campaign", "status": "stub",
+                "include_trends": include_trends, "product_ids": product_ids,
+                "message": f"(تجريبي) حملة {days} أيام بالمعمارية الجديدة"}
+
+    # إن طُلبت التريندات: استدعِ أداة التريند واجعلها سياقاً للحملة
+    selected_trends = []
+    if include_trends:
+        from agents.trends.trends_agent import fetch_trends
+        niche = (get_brand(brand_id) or {}).get("business_description", "")
+        selected_trends = fetch_trends(niche).get("trends", [])
+
     from database.session import SessionLocal
     from database.models import ContentPlan
     with SessionLocal() as db:
         plan = ContentPlan(user_id=user_id, brand_id=brand_id, days=days,
-                           campaign_goal="زيادة المبيعات",
+                           campaign_goal=goals[0], campaign_goals=goals,
+                           product_ids=product_ids, include_trends=include_trends,
+                           selected_trends=selected_trends, mode="campaign",
                            status="pending", campaign_name="حملة من الشات")
         db.add(plan); db.commit(); db.refresh(plan)
         plan_id = plan.id
 
-    from workflows.generate_content_plan import run_content_generation_pipeline
-    threading.Thread(target=run_content_generation_pipeline, args=(plan_id,), daemon=True).start()
+    from workflows.campaign_pipeline import run_campaign_pipeline
+    threading.Thread(target=run_campaign_pipeline, args=(plan_id,), daemon=True).start()
 
-    return {"plan_id": plan_id, "days": days,
-            "status": "started",
-            "message": f"بدأ توليد خطة {days} أيام. تابع الحالة عبر /plans/{plan_id}"}
+    return {"plan_id": plan_id, "days": days, "mode": "campaign", "status": "started",
+            "include_trends": include_trends, "product_ids": product_ids,
+            "message": f"بدأت حملة {days} أيام بالمعمارية الجديدة. تابع الحالة عبر /plans/{plan_id}"}

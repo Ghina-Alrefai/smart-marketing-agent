@@ -1,8 +1,15 @@
+import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
-import { CheckCircle, XCircle, Clock, Loader, Hash, Image, Trash2 } from 'lucide-react'
+import { CheckCircle, XCircle, Clock, Loader, Hash, Image, Trash2, CalendarClock } from 'lucide-react'
 import { getPlan, listPosts, approvePost, deletePlan } from '../api/client'
+import ImageLightbox from '../components/ImageLightbox'
+
+function formatWhen(iso) {
+  try { return new Date(iso).toLocaleString('ar', { dateStyle: 'medium', timeStyle: 'short' }) }
+  catch { return iso }
+}
 
 const STATUS_BADGE = {
   approved: 'bg-emerald-50 text-emerald-700',
@@ -16,6 +23,7 @@ export default function CampaignDetailPage() {
   const planId = parseInt(id)
   const qc = useQueryClient()
   const navigate = useNavigate()
+  const [zoom, setZoom] = useState(null)
 
   const { data: plan } = useQuery({
     queryKey: ['plan', planId],
@@ -31,7 +39,11 @@ export default function CampaignDetailPage() {
 
   const approveMutation = useMutation({
     mutationFn: ({ postId, approved }) => approvePost(postId, approved),
-    onSuccess: () => qc.invalidateQueries(['posts', planId]),
+    onSuccess: (_res, { approved }) => {
+      qc.invalidateQueries(['posts', planId])
+      qc.invalidateQueries(['scheduled'])
+      if (approved) toast.success('تم الاعتماد وجُدول تلقائياً على وقت الذروة (8 مساءً) 🗓️')
+    },
   })
 
   const deleteMutation = useMutation({
@@ -123,7 +135,8 @@ export default function CampaignDetailPage() {
                     <img
                       src={post.image_url}
                       alt="Post"
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover cursor-zoom-in hover:opacity-90 transition-opacity"
+                      onClick={() => setZoom(post.image_url)}
                       onError={(e) => {
                         e.target.style.display = 'none'
                         e.target.nextSibling.style.display = 'flex'
@@ -176,6 +189,12 @@ export default function CampaignDetailPage() {
                   {post.review_notes && (
                     <p className="text-xs text-gray-400 mt-2 italic">ملاحظات المراجعة: {post.review_notes}</p>
                   )}
+
+                  {post.approved && post.scheduled_at && (
+                    <p className="inline-flex items-center gap-1.5 text-xs text-emerald-700 bg-emerald-50 mt-2 px-2 py-1 rounded-full font-medium">
+                      <CalendarClock size={12} /> مجدول: {formatWhen(post.scheduled_at)}
+                    </p>
+                  )}
                 </div>
 
                 {/* Approval buttons */}
@@ -202,6 +221,8 @@ export default function CampaignDetailPage() {
           ))}
         </div>
       )}
+
+      <ImageLightbox src={zoom} onClose={() => setZoom(null)} />
     </div>
   )
 }

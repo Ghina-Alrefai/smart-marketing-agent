@@ -8,16 +8,25 @@ import re
 
 INTENTS = [
     "WRITE_POST", "CREATE_DESIGN", "WRITE_AND_DESIGN",
-    "REVIEW", "GET_STRATEGY", "FULL_PIPELINE", "UNKNOWN",
+    "REVIEW", "GET_STRATEGY", "FULL_PIPELINE", "CREATE_CAMPAIGN",
+    "GET_TRENDS", "SCHEDULE_POST", "GREETING", "UNKNOWN",
 ]
+
+_GREETING = ["مرحبا", "مرحباً", "اهلا", "أهلا", "هلا", "هاي", "السلام", "صباح",
+             "مساء", "hi", "hello", "hey", "شو الخدمات", "شو بتقدم", "شو بتقدر",
+             "كيف تساعد", "وش تسوي", "مساعدة", "ساعدني", "help", "من انت", "مين انت"]
 
 _DESIGN = ["صمم", "صمّم", "تصميم", "صورة", "ديزاين", "design", "بصري"]
 _WRITE = ["اكتب", "أكتب", "منشور", "بوست", "كابشن", "caption", "محتوى", "نص ترويجي"]
 _REVIEW = ["راجع", "مراجعة", "قيّم", "قيم", "تقييم", "review", "دقق"]
 _STRATEGY = ["أفضل منتج", "افضل منتج", "شو أنشر", "شو انشر", "استراتيجية",
              "استراتيجيه", "اقتراح", "نصيحة", "ماذا أنشر"]
-_PIPELINE = ["خطة", "حملة", "جدول", "calendar", "plan"]
+_CAMPAIGN = ["حملة", "campaign", "احملة", "اطلاق حملة", "إطلاق حملة"]
+_PIPELINE = ["خطة", "calendar", "plan", "خطة محتوى", "تقويم"]
 _DURATION = ["أسبوع", "اسبوع", "شهر", "يوم", "أيام", "ايام", "days", "week", "month"]
+_TRENDS = ["تريند", "ترند", "ترندات", "رائج", "الرائج", "الأكثر تداول", "trend", "trending"]
+_SCHEDULE = ["جدول", "جدولة", "موعد النشر", "موعد نشر", "حدد موعد", "انشر يوم",
+             "انشر بكرا", "انشر غدا", "انشر غداً", "نشر لاحقا", "نشر لاحقاً", "schedule"]
 
 
 def _has(text: str, words: list[str]) -> bool:
@@ -29,6 +38,13 @@ def _rule_classify(message: str) -> str:
     has_duration = _has(t, _DURATION) or bool(re.search(r"\d+", t))
     if _has(t, _REVIEW):
         return "REVIEW"
+    if _has(t, _SCHEDULE):
+        return "SCHEDULE_POST"
+    # الحملة الكاملة (المعمارية الجديدة) — كلمة «حملة» صريحة
+    if _has(t, _CAMPAIGN):
+        return "CREATE_CAMPAIGN"
+    if _has(t, _TRENDS):
+        return "GET_TRENDS"
     if _has(t, _PIPELINE) and has_duration:
         return "FULL_PIPELINE"
     if _has(t, _DESIGN) and _has(t, _WRITE):
@@ -41,6 +57,9 @@ def _rule_classify(message: str) -> str:
         return "GET_STRATEGY"
     if _has(t, _PIPELINE):
         return "FULL_PIPELINE"
+    # التحية/طلب المساعدة كملاذ أخير قبل UNKNOWN (كي لا تطغى على نية فعلية)
+    if _has(t, _GREETING):
+        return "GREETING"
     return "UNKNOWN"
 
 

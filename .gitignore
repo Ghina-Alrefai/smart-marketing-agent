@@ -23,6 +23,7 @@ uploads/*
 frontend/node_modules/
 frontend/dist/
 frontend/.vite/
+frontend/vite.config.js.timestamp-*.mjs
 
 # Editor / tool configs
 .claude/

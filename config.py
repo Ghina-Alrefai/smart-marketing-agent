@@ -9,8 +9,8 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "sqlite:///./marketing_os.db"
     UPLOAD_DIR: str = "./uploads"
     SECRET_KEY: str = "change-me-in-production"
-    GEMINI_MODEL: str = "gemini-2.5-flash-lite"
-    GEMINI_IMAGE_MODEL: str = "gemini-2.5-flash-image"
+    GEMINI_MODEL: str = "gemini-2.5-flash"
+    GEMINI_IMAGE_MODEL: str = "gemini-3.1-flash-image"
     MAX_UPLOAD_SIZE_MB: int = 10
 
 

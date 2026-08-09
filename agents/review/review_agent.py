@@ -27,3 +27,20 @@ def review_post(
         image_prompt=image_prompt,
     )
     return call_llm_json(prompt)
+
+
+# ── Campaign architecture (data-driven) ─────────────────────────────────────
+def review_campaign_post(post_id: str, content: dict | None = None,
+                         design: dict | None = None, brand_guide: dict | None = None) -> dict:
+    """
+    Review Agent لمعمارية الحملة — مُعطّل حالياً بطلب: يعيد null لكل شيء.
+    (البنية جاهزة لتفعيل التقييم لاحقاً دون تغيير الـ pipeline.)
+    """
+    return {
+        "post_id": post_id,
+        "approved": None,
+        "scores": None,
+        "issues": None,
+        "suggestions": None,
+        "review_summary": None,
+    }
