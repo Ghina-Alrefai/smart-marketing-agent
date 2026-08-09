@@ -33,3 +33,6 @@ frontend/vite.config.js.timestamp-*.mjs
 # OS
 .DS_Store
 Thumbs.db
+
+# Project explanation / docs (root-level HTML only; keep frontend/index.html)
+/*.html
