@@ -193,6 +193,13 @@ def _apply_answer(session, user_id, message):
 # ── الدالة الرئيسية ──────────────────────────────────────────────────────────
 def handle_message(user_id: int, brand_id: int, message: str,
                    session_id: str | None = None, dry_run: bool = False) -> dict:
+    from monitoring.usage_tracker import trace_context, agent_context
+    with trace_context(user_id=user_id), agent_context("orchestrator_agent"):
+        return _handle_message(user_id, brand_id, message, session_id, dry_run)
+
+
+def _handle_message(user_id: int, brand_id: int, message: str,
+                    session_id: str | None, dry_run: bool) -> dict:
     session = store.get_or_create(session_id)
     session.history.append(("user", message))
     use_llm = not dry_run

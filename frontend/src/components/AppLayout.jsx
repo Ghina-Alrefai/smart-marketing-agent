@@ -1,18 +1,34 @@
-import { NavLink, Outlet } from 'react-router-dom'
-import { LayoutDashboard, Megaphone, Package, Sparkles, Settings, MessageCircle, CalendarClock } from 'lucide-react'
+import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { LayoutDashboard, Megaphone, Package, Sparkles, Settings, MessageCircle, CalendarClock, Users, LogOut, ShieldCheck, Activity } from 'lucide-react'
 import clsx from 'clsx'
+import useStore from '../store'
 
-const navItems = [
+const baseNav = [
   { to: '/', icon: LayoutDashboard, label: 'الرئيسية' },
   { to: '/chat', icon: MessageCircle, label: 'المساعد الذكي' },
   { to: '/brand', icon: Sparkles, label: 'البراند' },
   { to: '/products', icon: Package, label: 'المنتجات' },
   { to: '/campaigns', icon: Megaphone, label: 'الحملات' },
   { to: '/scheduled', icon: CalendarClock, label: 'المجدولة' },
+  { to: '/monitoring', icon: Activity, label: 'الاستهلاك' },
   { to: '/settings', icon: Settings, label: 'الإعدادات' },
 ]
 
+const adminNav = [{ to: '/admin/users', icon: Users, label: 'المستخدمون' }]
+
 export default function AppLayout() {
+  const navigate = useNavigate()
+  const user = useStore((s) => s.user)
+  const logout = useStore((s) => s.logout)
+  const isAdmin = user?.role === 'super_admin'
+
+  const navItems = isAdmin ? [...baseNav, ...adminNav] : baseNav
+
+  const handleLogout = () => {
+    logout()
+    navigate('/login', { replace: true })
+  }
+
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
       {/* Sidebar */}
@@ -31,7 +47,7 @@ export default function AppLayout() {
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 p-4 space-y-1">
+        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
           {navItems.map(({ to, icon: Icon, label }) => (
             <NavLink
               key={to}
@@ -51,6 +67,30 @@ export default function AppLayout() {
             </NavLink>
           ))}
         </nav>
+
+        {/* User footer */}
+        <div className="p-4 border-t border-gray-100">
+          <div className="flex items-center gap-3 mb-3 px-1">
+            {user?.avatar_url
+              ? <img src={user.avatar_url} alt="" className="w-9 h-9 rounded-full" referrerPolicy="no-referrer" />
+              : <div className="w-9 h-9 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 font-bold">{user?.name?.[0] || '؟'}</div>}
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-gray-900 truncate flex items-center gap-1">
+                {user?.name || 'مستخدم'}
+                {isAdmin && <ShieldCheck size={13} className="text-amber-500 flex-shrink-0" />}
+              </p>
+              <p className="text-xs text-gray-400 truncate" dir="ltr">{user?.email}</p>
+            </div>
+          </div>
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-medium
+                       text-gray-600 hover:bg-red-50 hover:text-red-600 transition-colors border border-gray-100"
+          >
+            <LogOut size={16} />
+            تسجيل الخروج
+          </button>
+        </div>
       </aside>
 
       {/* Main content */}

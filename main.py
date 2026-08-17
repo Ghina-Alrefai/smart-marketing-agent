@@ -9,11 +9,12 @@ from fastapi.responses import FileResponse
 from pathlib import Path
 
 from config import settings
-from database.session import init_db
-from api.routers import users, brands, products, plans, chat, scheduled, events
+from database.session import init_db, seed_admin
+from api.routers import users, brands, products, plans, chat, scheduled, events, auth, monitoring
 
 # ── Init DB on startup ─────────────────────────────────────────────────────
 init_db()
+seed_admin()   # يهيّئ حساب المشرف الثابت إن لم يكن موجوداً
 
 # ── App ────────────────────────────────────────────────────────────────────
 app = FastAPI(
@@ -37,6 +38,7 @@ uploads_path.mkdir(parents=True, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=str(uploads_path)), name="uploads")
 
 # ── Routers ────────────────────────────────────────────────────────────────
+app.include_router(auth.router, prefix="/api/v1")
 app.include_router(users.router, prefix="/api/v1")
 app.include_router(brands.router, prefix="/api/v1")
 app.include_router(products.router, prefix="/api/v1")
@@ -44,6 +46,7 @@ app.include_router(plans.router, prefix="/api/v1")
 app.include_router(chat.router, prefix="/api/v1")
 app.include_router(scheduled.router, prefix="/api/v1")
 app.include_router(events.router, prefix="/api/v1")
+app.include_router(monitoring.router, prefix="/api/v1")
 
 # ── Serve React frontend build ─────────────────────────────────────────────
 _frontend_dist = Path(__file__).parent / "frontend" / "dist"

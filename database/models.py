@@ -12,11 +12,17 @@ class Base(DeclarativeBase):
 
 class User(Base):
     __tablename__ = "users"
-    id         = Column(Integer, primary_key=True, index=True)
-    name       = Column(String(100), nullable=False)
-    email      = Column(String(255), unique=True, nullable=False, index=True)
-    plan       = Column(String(50), default="free")
-    created_at = Column(DateTime, default=datetime.utcnow)
+    id            = Column(Integer, primary_key=True, index=True)
+    name          = Column(String(100), nullable=False)
+    email         = Column(String(255), unique=True, nullable=False, index=True)
+    plan          = Column(String(50), default="free")
+    role          = Column(String(20), default="user")        # super_admin | user
+    auth_provider = Column(String(20), default="google")      # google | password
+    google_sub    = Column(String(255), nullable=True, index=True)  # Google account subject id
+    password_hash = Column(String(255), nullable=True)        # للأدمِن الثابت فقط
+    avatar_url    = Column(String(500), nullable=True)         # صورة حساب Google
+    last_login_at = Column(DateTime, nullable=True)
+    created_at    = Column(DateTime, default=datetime.utcnow)
 
     brands   = relationship("Brand",   back_populates="user", cascade="all, delete-orphan")
     products = relationship("Product", back_populates="user", cascade="all, delete-orphan")
@@ -127,6 +133,43 @@ class GeneratedPost(Base):
 
     content_plan = relationship("ContentPlan",  back_populates="posts")
     product      = relationship("Product")
+
+
+class LLMUsageLog(Base):
+    """سجل تنفيذ واحد لاستدعاء نموذج ذكاء اصطناعي — طبقة المراقبة واستهلاك الموارد.
+
+    كل حملة (ContentPlan) تُنشئ trace_id واحد يمثل دورة تنفيذها الكاملة،
+    وكل استدعاء وكيل للنموذج يُسجَّل بـ span_id مستقل تحت هذا الـ trace.
+    """
+    __tablename__ = "llm_usage_logs"
+    id             = Column(Integer, primary_key=True, index=True)
+
+    trace_id       = Column(String(100), index=True, nullable=False)
+    span_id        = Column(String(100), nullable=False)
+
+    user_id        = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    content_plan_id= Column(Integer, ForeignKey("content_plans.id"), nullable=True, index=True)
+
+    agent_name     = Column(String(100), nullable=False, index=True)
+    model_name     = Column(String(100), nullable=False)
+
+    started_at     = Column(DateTime, nullable=False)
+    completed_at   = Column(DateTime, nullable=True)
+    duration_ms    = Column(Float, default=0)
+
+    input_tokens   = Column(Integer, default=0)
+    output_tokens  = Column(Integer, default=0)
+    total_tokens   = Column(Integer, default=0)
+    estimated_cost = Column(Float, default=0)
+
+    status         = Column(String(30), default="success")   # success | failed
+    retry_count    = Column(Integer, default=0)
+    error_type     = Column(String(100), nullable=True)
+
+    created_at     = Column(DateTime, default=datetime.utcnow, index=True)
+
+    user         = relationship("User")
+    content_plan = relationship("ContentPlan")
 
 
 class ScheduledPost(Base):

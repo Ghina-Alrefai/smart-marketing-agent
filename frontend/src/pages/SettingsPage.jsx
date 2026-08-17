@@ -1,53 +1,53 @@
-import { useState } from 'react'
-import { useMutation } from '@tanstack/react-query'
-import toast from 'react-hot-toast'
-import { User } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { User, ShieldCheck, LogOut, Mail, BadgeCheck } from 'lucide-react'
 import useStore from '../store'
-import { createUser } from '../api/client'
 
 export default function SettingsPage() {
-  const { user, setUser } = useStore()
-  const [form, setForm] = useState({ name: user?.name || '', email: user?.email || '' })
+  const navigate = useNavigate()
+  const user = useStore((s) => s.user)
+  const logout = useStore((s) => s.logout)
+  const isAdmin = user?.role === 'super_admin'
 
-  const mutation = useMutation({
-    mutationFn: (data) => createUser(data),
-    onSuccess: (res) => {
-      setUser(res.data)
-      toast.success('تم حفظ الإعدادات ✅')
-    },
-    onError: (err) => {
-      if (err.response?.status === 409) toast.error('البريد الإلكتروني مسجل مسبقاً')
-      else toast.error('حدث خطأ')
-    },
-  })
+  const handleLogout = () => { logout(); navigate('/login', { replace: true }) }
 
   return (
     <div className="p-8 max-w-xl mx-auto">
       <h1 className="text-2xl font-bold text-gray-900 mb-1">الإعدادات</h1>
       <p className="text-gray-500 mb-8">معلومات حسابك</p>
 
-      <div className="card space-y-4">
-        <div className="flex items-center gap-4 mb-4">
-          <div className="w-14 h-14 bg-primary-100 rounded-full flex items-center justify-center">
-            <User size={24} className="text-primary-600" />
-          </div>
+      <div className="card space-y-5">
+        <div className="flex items-center gap-4">
+          {user?.avatar_url
+            ? <img src={user.avatar_url} alt="" className="w-14 h-14 rounded-full" referrerPolicy="no-referrer" />
+            : <div className="w-14 h-14 bg-primary-100 rounded-full flex items-center justify-center">
+                <User size={24} className="text-primary-600" />
+              </div>}
           <div>
-            <p className="font-bold text-gray-900">{user?.name || 'لم يتم الإعداد'}</p>
-            <p className="text-sm text-gray-400">{user?.email || '—'}</p>
+            <p className="font-bold text-gray-900 flex items-center gap-1.5">
+              {user?.name || 'مستخدم'}
+              {isAdmin && <ShieldCheck size={15} className="text-amber-500" />}
+            </p>
+            <p className="text-sm text-gray-400" dir="ltr">{user?.email || '—'}</p>
           </div>
         </div>
 
-        <div>
-          <label className="label">الاسم</label>
-          <input className="input" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="اسمك الكامل" />
-        </div>
-        <div>
-          <label className="label">البريد الإلكتروني</label>
-          <input className="input" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="example@email.com" dir="ltr" />
+        <div className="grid grid-cols-2 gap-3 pt-2">
+          <div className="bg-gray-50 rounded-xl p-3">
+            <p className="text-xs text-gray-400 mb-1 flex items-center gap-1"><BadgeCheck size={13} /> الدور</p>
+            <p className="text-sm font-semibold text-gray-800">{isAdmin ? 'مشرف (Super Admin)' : 'مستخدم عادي'}</p>
+          </div>
+          <div className="bg-gray-50 rounded-xl p-3">
+            <p className="text-xs text-gray-400 mb-1 flex items-center gap-1"><Mail size={13} /> طريقة الدخول</p>
+            <p className="text-sm font-semibold text-gray-800">{user?.auth_provider === 'google' ? 'Google' : 'كلمة مرور'}</p>
+          </div>
         </div>
 
-        <button className="btn-primary w-full py-2.5" onClick={() => mutation.mutate(form)} disabled={!form.name || !form.email || mutation.isPending}>
-          {mutation.isPending ? 'جاري الحفظ...' : user ? 'تحديث' : 'إنشاء حساب'}
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium
+                     text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
+        >
+          <LogOut size={16} /> تسجيل الخروج
         </button>
       </div>
     </div>

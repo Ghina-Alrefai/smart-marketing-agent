@@ -21,6 +21,7 @@ Campaign Pipeline — المعمارية المهيكلة القائمة على 
 """
 from __future__ import annotations
 
+import contextvars
 import json
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
@@ -28,6 +29,7 @@ from typing import Any, Callable
 
 from database.session import SessionLocal
 from database.models import ContentPlan
+from monitoring.usage_tracker import trace_context, agent_context
 from tools.db_tools import (
     get_products,
     update_plan_status,
@@ -144,105 +146,112 @@ def run_campaign_pipeline(
     update_plan_status(plan_id, "generating")
     errors: list[str] = []
 
-    try:
-        # ── 1. Brand Agent → Brand Guide ─────────────────────────────────────
-        emit("🏷️ تحليل هوية البراند...", 1, 6)
-        if dry_run:
-            brand_guide = {"brand_name": "(تجريبي)", "brand_colors": ["#111"],
-                           "visual_style": "modern", "template_url": "",
-                           "must_use_words": [], "forbidden_words": [], "preferred_cta": ""}
-        else:
-            from agents.brand.brand_agent import analyze_brand
-            analyze_out = analyze_brand(cfg.brand_id)
-            if "error" in analyze_out:
+    # كل حملة = دورة تنفيذ واحدة (Trace) — كل استدعاءات النماذج ضمنها تُسجَّل
+    # تحت نفس trace_id في monitoring/usage_tracker لأغراض المراقبة والتكلفة.
+    with trace_context(user_id=cfg.user_id, content_plan_id=plan_id):
+        try:
+            # ── 1. Brand Agent → Brand Guide ─────────────────────────────────────
+            emit("🏷️ تحليل هوية البراند...", 1, 6)
+            if dry_run:
+                brand_guide = {"brand_name": "(تجريبي)", "brand_colors": ["#111"],
+                               "visual_style": "modern", "template_url": "",
+                               "must_use_words": [], "forbidden_words": [], "preferred_cta": ""}
+            else:
+                from agents.brand.brand_agent import analyze_brand
+                with agent_context("brand_agent"):
+                    analyze_out = analyze_brand(cfg.brand_id)
+                if "error" in analyze_out:
+                    update_plan_status(plan_id, "failed")
+                    return CampaignResult(False, plan_id, errors=[analyze_out["error"]])
+                brand_guide = _build_brand_guide(analyze_out)
+            guidelines_str = json.dumps(brand_guide.get("guidelines", {}), ensure_ascii=False)
+
+            # قائمة منتجات أساسية للاستراتيجية
+            basic_products = get_products(cfg.user_id, cfg.product_ids or None)
+            if not basic_products:
                 update_plan_status(plan_id, "failed")
-                return CampaignResult(False, plan_id, errors=[analyze_out["error"]])
-            brand_guide = _build_brand_guide(analyze_out)
-        guidelines_str = json.dumps(brand_guide.get("guidelines", {}), ensure_ascii=False)
+                return CampaignResult(False, plan_id, errors=["لا توجد منتجات مختارة للحملة."])
 
-        # قائمة منتجات أساسية للاستراتيجية
-        basic_products = get_products(cfg.user_id, cfg.product_ids or None)
-        if not basic_products:
+            # ── 2. Strategy Agent → استراتيجية كلّية ────────────────────────────
+            emit("📋 بناء استراتيجية الحملة...", 2, 6)
+            if dry_run:
+                strategy = _stub_strategy(cfg.days, basic_products, cfg.goals)
+            else:
+                from agents.strategy.strategy_agent import build_campaign_strategy
+                with agent_context("strategy_agent"):
+                    strategy = build_campaign_strategy(
+                        brand_guide=brand_guide, products=basic_products, goals=cfg.goals,
+                        days=cfg.days, include_trends=cfg.include_trends,
+                        trends=cfg.selected_trends, events=cfg.selected_events,
+                    )
+
+            # ── 3. Product Agent → سياق المنتجات ────────────────────────────────
+            emit("📦 تجهيز سياق المنتجات...", 3, 6)
+            if dry_run:
+                products_ctx = [{"id": p["id"], "name": p["title"], "price": p.get("price"),
+                                 "category": p.get("category", ""), "image_url": p.get("image_url", ""),
+                                 "is_marketed": p.get("is_marketed", False), "analysis": {"_stub": True}}
+                                for p in basic_products]
+            else:
+                from agents.product.product_analysis_agent import prepare_products_context
+                with agent_context("product_agent"):
+                    products_ctx = prepare_products_context(
+                        cfg.user_id, cfg.product_ids or [p["id"] for p in basic_products], guidelines_str
+                    ).get("products", [])
+            product_by_id = {p["id"]: p for p in products_ctx}
+
+            # ── 4. Idea Agent → أفكار قانونية (post_id + idea) ──────────────────
+            emit("💡 توليد أفكار المنشورات...", 4, 6)
+            post_count = int(strategy.get("recommended_post_count") or len(products_ctx) or cfg.days)
+            if dry_run:
+                ideas = _stub_ideas(products_ctx, min(post_count, 30))
+            else:
+                from agents.idea.idea_agent import generate_post_ideas
+                with agent_context("idea_agent"):
+                    ideas = generate_post_ideas(strategy, products_ctx, brand_guide,
+                                                cfg.selected_trends, post_count)
+            idea_posts = ideas.get("posts", [])
+            total = len(idea_posts)
+
+            # ── 5. لكل بوست: Content ∥ Design (نفس الفكرة) → Review(null) ────────
+            emit("✍️🎨 كتابة المحتوى وتصميم الصور...", 5, 6)
+            campaign_posts: list[dict] = []
+            prev_visual_concepts: list[str] = []   # يُمرَّر كسياق سلبي لتجنّب تكرار التكوين البصري
+            for i, idea_post in enumerate(idea_posts, 1):
+                try:
+                    post_obj = _build_one_post(i, idea_post, product_by_id, brand_guide,
+                                               cfg, plan_id, dry_run, prev_visual_concepts)
+                    campaign_posts.append(post_obj)
+                    vc = (post_obj.get("design") or {}).get("visual_concept", "")
+                    if vc:
+                        prev_visual_concepts.append(vc)
+                except Exception as exc:  # noqa: BLE001
+                    errors.append(f"{idea_post.get('post_id', i)} failed: {exc}")
+                    print(f"[Campaign] ERROR — {exc}")
+
+            # ── 6. كائن الحملة الموحّد + حفظ ────────────────────────────────────
+            emit("🧩 تجميع كائن الحملة...", 6, 6)
+            campaign = {
+                "strategy": strategy,
+                "products": products_ctx,
+                "posts": campaign_posts,
+            }
+            save_plan_campaign_data(plan_id, strategy=strategy, campaign_data={"campaign": campaign})
+
+            # ── 7. البوستات المعتمدة فقط → Schedule Agent ───────────────────────
+            # المراجعة تُعيد null (غير معتمدة) → لا جدولة تلقائية هنا؛
+            # يعتمد المستخدم لاحقاً فتُجدول تلقائياً (feature موجود على الاعتماد).
+            _schedule_approved(campaign_posts, cfg, dry_run)
+
+            final_status = "done" if not errors else "done_with_errors"
+            update_plan_status(plan_id, final_status)
+            emit("✅ اكتملت الحملة!", total, total)
+            return CampaignResult(True, plan_id, posts_generated=len(campaign_posts),
+                                  campaign={"campaign": campaign}, errors=errors)
+
+        except Exception as exc:  # noqa: BLE001
             update_plan_status(plan_id, "failed")
-            return CampaignResult(False, plan_id, errors=["لا توجد منتجات مختارة للحملة."])
-
-        # ── 2. Strategy Agent → استراتيجية كلّية ────────────────────────────
-        emit("📋 بناء استراتيجية الحملة...", 2, 6)
-        if dry_run:
-            strategy = _stub_strategy(cfg.days, basic_products, cfg.goals)
-        else:
-            from agents.strategy.strategy_agent import build_campaign_strategy
-            strategy = build_campaign_strategy(
-                brand_guide=brand_guide, products=basic_products, goals=cfg.goals,
-                days=cfg.days, include_trends=cfg.include_trends,
-                trends=cfg.selected_trends, events=cfg.selected_events,
-            )
-
-        # ── 3. Product Agent → سياق المنتجات ────────────────────────────────
-        emit("📦 تجهيز سياق المنتجات...", 3, 6)
-        if dry_run:
-            products_ctx = [{"id": p["id"], "name": p["title"], "price": p.get("price"),
-                             "category": p.get("category", ""), "image_url": p.get("image_url", ""),
-                             "is_marketed": p.get("is_marketed", False), "analysis": {"_stub": True}}
-                            for p in basic_products]
-        else:
-            from agents.product.product_analysis_agent import prepare_products_context
-            products_ctx = prepare_products_context(
-                cfg.user_id, cfg.product_ids or [p["id"] for p in basic_products], guidelines_str
-            ).get("products", [])
-        product_by_id = {p["id"]: p for p in products_ctx}
-
-        # ── 4. Idea Agent → أفكار قانونية (post_id + idea) ──────────────────
-        emit("💡 توليد أفكار المنشورات...", 4, 6)
-        post_count = int(strategy.get("recommended_post_count") or len(products_ctx) or cfg.days)
-        if dry_run:
-            ideas = _stub_ideas(products_ctx, min(post_count, 30))
-        else:
-            from agents.idea.idea_agent import generate_post_ideas
-            ideas = generate_post_ideas(strategy, products_ctx, brand_guide,
-                                        cfg.selected_trends, post_count)
-        idea_posts = ideas.get("posts", [])
-        total = len(idea_posts)
-
-        # ── 5. لكل بوست: Content ∥ Design (نفس الفكرة) → Review(null) ────────
-        emit("✍️🎨 كتابة المحتوى وتصميم الصور...", 5, 6)
-        campaign_posts: list[dict] = []
-        prev_visual_concepts: list[str] = []   # يُمرَّر كسياق سلبي لتجنّب تكرار التكوين البصري
-        for i, idea_post in enumerate(idea_posts, 1):
-            try:
-                post_obj = _build_one_post(i, idea_post, product_by_id, brand_guide,
-                                           cfg, plan_id, dry_run, prev_visual_concepts)
-                campaign_posts.append(post_obj)
-                vc = (post_obj.get("design") or {}).get("visual_concept", "")
-                if vc:
-                    prev_visual_concepts.append(vc)
-            except Exception as exc:  # noqa: BLE001
-                errors.append(f"{idea_post.get('post_id', i)} failed: {exc}")
-                print(f"[Campaign] ERROR — {exc}")
-
-        # ── 6. كائن الحملة الموحّد + حفظ ────────────────────────────────────
-        emit("🧩 تجميع كائن الحملة...", 6, 6)
-        campaign = {
-            "strategy": strategy,
-            "products": products_ctx,
-            "posts": campaign_posts,
-        }
-        save_plan_campaign_data(plan_id, strategy=strategy, campaign_data={"campaign": campaign})
-
-        # ── 7. البوستات المعتمدة فقط → Schedule Agent ───────────────────────
-        # المراجعة تُعيد null (غير معتمدة) → لا جدولة تلقائية هنا؛
-        # يعتمد المستخدم لاحقاً فتُجدول تلقائياً (feature موجود على الاعتماد).
-        _schedule_approved(campaign_posts, cfg, dry_run)
-
-        final_status = "done" if not errors else "done_with_errors"
-        update_plan_status(plan_id, final_status)
-        emit("✅ اكتملت الحملة!", total, total)
-        return CampaignResult(True, plan_id, posts_generated=len(campaign_posts),
-                              campaign={"campaign": campaign}, errors=errors)
-
-    except Exception as exc:  # noqa: BLE001
-        update_plan_status(plan_id, "failed")
-        return CampaignResult(False, plan_id, errors=[str(exc)])
+            return CampaignResult(False, plan_id, errors=[str(exc)])
 
 
 # ── بناء بوست واحد: Content ∥ Design على *نفس* الفكرة ───────────────────────
@@ -268,18 +277,32 @@ def _build_one_post(index: int, idea_post: dict, product_by_id: dict,
     else:
         from agents.content.content_agent import write_content_for_idea
         from agents.design.design_agent import design_for_idea
+
+        # ThreadPoolExecutor لا يورّث contextvars تلقائياً للخيوط الفرعية،
+        # فنلتقط السياق الحالي (trace/user/plan) ونشغّل الدالة صريحاً ضمنه
+        # حتى يبقى تتبّع content_agent مرتبطاً بنفس trace_id للحملة.
+        ctx = contextvars.copy_context()
+
+        def _write_content():
+            def _call():
+                with agent_context("content_agent"):
+                    return write_content_for_idea(idea_post, product, brand_guide,
+                                                  trend, hook_style, caption_style)
+            return ctx.run(_call)
+
         # تنفيذ متوازٍ — لكن كلاهما يستقبل نفس idea_post (نفس المفهوم)
         with ThreadPoolExecutor(max_workers=2) as ex:
-            f_content = ex.submit(write_content_for_idea, idea_post, product, brand_guide,
-                                  trend, hook_style, caption_style)
+            f_content = ex.submit(_write_content)
             content = f_content.result()
             # التصميم يستخدم النص للاتّساق البصري → ننتظر المحتوى ثم نصمّم
-            design = design_for_idea(idea_post, content, product, brand_guide,
-                                     photo_style, avoid)
+            with agent_context("design_agent"):
+                design = design_for_idea(idea_post, content, product, brand_guide,
+                                         photo_style, avoid)
 
     # Review Agent — معطّل (null لكل شيء)
     from agents.review.review_agent import review_campaign_post
-    review = review_campaign_post(post_id, content, design, brand_guide)
+    with agent_context("review_agent"):
+        review = review_campaign_post(post_id, content, design, brand_guide)
     approved = bool(review.get("approved"))   # None → False
 
     # حفظ صف GeneratedPost (يبقي واجهة الحملة/الاعتماد/الجدولة تعمل)

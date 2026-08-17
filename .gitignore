@@ -15,9 +15,8 @@ venv/
 *.sqlite
 *.sqlite3
 
-# Uploaded / generated files
-uploads/*
-!uploads/.gitkeep
+# Uploaded / generated files (tracked intentionally — see project decision)
+
 
 # Frontend
 frontend/node_modules/
