@@ -40,6 +40,13 @@ class Brand(Base):
     forbidden_words         = Column(JSON, default=list)
     preferred_cta           = Column(String(200))
     preferred_content_types = Column(JSON, default=list)
+    # Stable Brand-DNA state. Performance-derived memory is stored separately
+    # by Adaptive Memory and never overwrites this profile automatically.
+    dna_status              = Column(String(30), default="uninitialized")
+    dna_profile             = Column(JSON, default=dict)
+    dna_profile_version     = Column(String(120))
+    dna_model_scope         = Column(String(30), default="none")
+    dna_training_post_count = Column(Integer, default=0)
     created_at              = Column(DateTime, default=datetime.utcnow)
     updated_at              = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -95,7 +102,10 @@ class ContentPlan(Base):
     mode            = Column(String(20), default="campaign")  # campaign (المعمارية الجديدة) | legacy
     strategy        = Column(JSON, default=dict)           # مخرَج Strategy Agent المهيكل
     campaign_data   = Column(JSON, default=dict)           # كائن الحملة الموحّد النهائي
+    intelligence_summary = Column(JSON, default=dict)      # إصدارات DNA/Memory المستخدمة
     status        = Column(String(50), default="pending")
+    current_stage = Column(String(200), nullable=True)      # آخر مرحلة وصل إليها التوليد
+    error_message = Column(Text, nullable=True)             # سبب فشل المهمة الخلفية للمستخدم
     created_at    = Column(DateTime, default=datetime.utcnow)
 
     brand = relationship("Brand",         back_populates="content_plans")
@@ -123,10 +133,49 @@ class GeneratedPost(Base):
     approved        = Column(Boolean, default=False)
     review_notes    = Column(Text)
     scheduled_at    = Column(DateTime, nullable=True)
+    # Reproducible intelligence trace for committee/demo and later learning.
+    candidate_results   = Column(JSON, default=list)
+    selected_candidate  = Column(JSON, default=dict)
+    predesign_score     = Column(Float, nullable=True)
+    multimodal_score    = Column(Float, nullable=True)
+    intelligence_status = Column(String(50), default="not_evaluated")
+    evaluation          = Column(JSON, default=dict)
+    dna_profile_version = Column(String(120), nullable=True)
+    dna_model_version   = Column(String(120), nullable=True)
+    memory_policy_ids   = Column(JSON, default=list)
+    generation_trace_id = Column(String(120), nullable=True, index=True)
     created_at      = Column(DateTime, default=datetime.utcnow)
 
     content_plan = relationship("ContentPlan",  back_populates="posts")
     product      = relationship("Product")
+    performance_snapshots = relationship(
+        "PostPerformanceSnapshot", back_populates="generated_post",
+        cascade="all, delete-orphan",
+    )
+
+
+class PostPerformanceSnapshot(Base):
+    """Observed Facebook/manual metrics after a fixed window.
+
+    These rows are operational audit records. Adaptive Memory stores the
+    immutable per-feature Evidence derived from them in its own storage layer.
+    """
+    __tablename__ = "post_performance_snapshots"
+    id                = Column(Integer, primary_key=True, index=True)
+    generated_post_id = Column(Integer, ForeignKey("generated_posts.id"), nullable=False)
+    observation_window = Column(String(30), default="24h")
+    actual_success     = Column(Boolean, nullable=False)
+    reactions          = Column(Float, nullable=True)
+    comments           = Column(Float, nullable=True)
+    shares             = Column(Float, nullable=True)
+    reach              = Column(Float, nullable=True)
+    clicks             = Column(Float, nullable=True)
+    weighted_engagement = Column(Float, nullable=True)
+    relative_performance_index = Column(Float, nullable=True)
+    memory_parent_event_id = Column(String(160), nullable=True)
+    created_at         = Column(DateTime, default=datetime.utcnow)
+
+    generated_post = relationship("GeneratedPost", back_populates="performance_snapshots")
 
 
 class ScheduledPost(Base):

@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>الورك فلو الكامل للنظام — AI Marketing OS</title>
+<style>
+  :root{
+    --ground:#eef0f5; --paper:#ffffff; --frame:#c9cfdd;
+    --ink:#1c2333; --ink-2:#41496a; --muted:#69728e; --faint:#8a91a8;
+    --navy:#2b3a67; --accent:#3f5bd0; --accent-soft:#eef1fc;
+    --model:#6b46c1; --model-soft:#f1ecfb;
+    --mem:#2f7d5b; --mem-soft:#e9f6ef;
+    --run:#556084; --run-soft:#f4f5f9;
+    --eval:#b3841f; --eval-soft:#fdf7e8;
+    --opt-stroke:#8a91a8; --opt-soft:#f6f7fa;
+    --arrow:#4a5372; --arrow-dash:#8a91a8;
+    --campaign:#1f8a70; --chat:#6b46c1;
+    --mono:"Cascadia Code",Consolas,"SFMono-Regular",ui-monospace,monospace;
+    --sans:"Segoe UI","Noto Kufi Arabic",Tahoma,system-ui,sans-serif;
+    --serif:"Cambria","Times New Roman",Georgia,serif;
+    --shadow:0 14px 34px -26px rgba(20,28,60,.5);
+  }
+  :root[data-theme="dark"]{
+    --ground:#0f1220; --paper:#161a29; --frame:#2c3350;
+    --ink:#e8ebf6; --ink-2:#c0c6de; --muted:#9198b6; --faint:#6b7294;
+    --navy:#aeb9e6; --accent:#8497f2; --accent-soft:#1d2444;
+    --model:#b69bf0; --model-soft:#241b3d;
+    --mem:#4fb98a; --mem-soft:#123024;
+    --run:#8a93b6; --run-soft:#1a1f31;
+    --eval:#d9b559; --eval-soft:#2a2412;
+    --opt-stroke:#5b658a; --opt-soft:#171b2b;
+    --arrow:#8a93b6; --arrow-dash:#69708f;
+    --campaign:#4fc4a3; --chat:#b69bf0;
+    --shadow:0 14px 34px -24px rgba(0,0,0,.7);
+  }
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);line-height:1.8;padding:0 0 70px}
+  .wrap{max-width:960px;margin:0 auto;padding:0 20px}
+
+  /* header */
+  header.pg{padding:40px 0 12px;text-align:center}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--accent)}
+  h1{font-family:var(--serif);font-size:clamp(23px,4vw,34px);margin:10px 0 6px;font-weight:700}
+  header.pg p{color:var(--muted);margin:0;font-size:15px}
+  .toolbar{display:flex;gap:8px;justify-content:center;margin:18px 0 4px}
+  .toolbar button{font-family:var(--sans);font-size:13px;padding:7px 15px;border-radius:9px;cursor:pointer;
+    background:var(--paper);border:1px solid var(--frame);color:var(--ink)}
+  .toolbar button:hover{border-color:var(--accent);color:var(--accent)}
+
+  /* legend */
+  .legend{display:flex;flex-wrap:wrap;gap:10px 20px;justify-content:center;max-width:820px;margin:20px auto 8px;
+    background:var(--paper);border:1px solid var(--frame);border-radius:12px;padding:14px 18px}
+  .lg{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink-2)}
+  .sw{width:24px;height:15px;border-radius:4px;flex-shrink:0;border:1.6px solid}
+  .sw.start{border-radius:9px;background:var(--mem-soft);border-color:var(--mem)}
+  .sw.opt{background:var(--opt-soft);border-color:var(--opt-stroke);border-style:dashed}
+  .sw.model{background:var(--model-soft);border-color:var(--model)}
+  .sw.mem{background:var(--mem-soft);border-color:var(--mem)}
+  .sw.run{background:var(--run-soft);border-color:var(--run)}
+  .sw.eval{background:var(--eval-soft);border-color:var(--eval)}
+  .sw.orch{background:var(--accent-soft);border-color:var(--accent)}
+
+  /* flow spine */
+  .flow{display:flex;flex-direction:column;align-items:center;margin:26px auto 0}
+
+  /* phase band */
+  .phase{width:100%;display:flex;flex-direction:column;align-items:center}
+  .phase-tag{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);
+    background:var(--paper);border:1px solid var(--frame);border-radius:999px;padding:5px 16px;margin:6px 0}
+
+  /* generic node */
+  .node{width:100%;max-width:640px;background:var(--paper);border:1.6px solid var(--frame);border-radius:14px;
+    padding:16px 20px;box-shadow:var(--shadow);position:relative}
+  .node .step{position:absolute;top:-13px;inset-inline-start:20px;width:28px;height:28px;border-radius:9px;
+    display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:700;font-size:13px;
+    background:var(--accent);color:#fff;box-shadow:var(--shadow)}
+  .node h3{margin:2px 0 4px;font-size:16.5px;font-weight:700}
+  .node .desc{color:var(--muted);font-size:13.5px;margin:0}
+  .node .out{margin-top:10px;font-size:13px;color:var(--accent);font-weight:700}
+  .tag{position:absolute;top:-11px;inset-inline-end:18px;font-family:var(--mono);font-size:10.5px;
+    padding:2px 9px;border-radius:999px;background:var(--opt-soft);border:1px dashed var(--opt-stroke);color:var(--muted)}
+
+  /* node color variants */
+  .n-start{border-radius:34px;background:var(--mem-soft);border-color:var(--mem)}
+  .n-start .step{background:var(--mem)}
+  .n-start h3{color:var(--mem)}
+  .n-opt{border-style:dashed;border-color:var(--opt-stroke);background:var(--opt-soft)}
+  .n-opt .step{background:var(--opt-stroke)}
+  .n-model{background:var(--model-soft);border-color:var(--model)}
+  .n-model .step{background:var(--model)}
+  .n-model h3{color:var(--model)}
+  .n-model .out{color:var(--model)}
+  .n-mem{background:var(--mem-soft);border-color:var(--mem);border-width:2px;max-width:680px}
+  .n-mem .step{background:var(--mem)}
+  .n-mem h3{color:var(--mem)}
+  .n-eval{background:var(--eval-soft);border-color:var(--eval);max-width:680px}
+  .n-eval .step{background:var(--eval)}
+  .n-eval h3{color:var(--eval)}
+
+  /* two-option grid inside a node */
+  .opts{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+  @media (max-width:620px){.opts{grid-template-columns:1fr}}
+  .opt{border:1px solid var(--frame);border-radius:11px;padding:12px 14px;background:var(--paper);position:relative}
+  .opt .lbl{font-family:var(--mono);font-weight:700;font-size:12px;color:var(--accent);
+    background:var(--accent-soft);border-radius:6px;padding:1px 8px;display:inline-block;margin-bottom:6px}
+  .opt b{display:block;font-size:14px;margin-bottom:3px}
+  .opt p{margin:0;font-size:12.5px;color:var(--muted);line-height:1.7}
+  .opt ul{margin:6px 0 0;padding:0;list-style:none}
+  .opt ul li{position:relative;padding-inline-start:15px;font-size:12.5px;color:var(--ink-2);margin:2px 0}
+  .opt ul li::before{content:"›";position:absolute;inset-inline-start:0;color:var(--accent);font-weight:700}
+
+  /* memory chips */
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+  .chip{font-size:12.5px;padding:6px 13px;border-radius:999px;background:var(--paper);border:1px solid var(--mem);
+    color:var(--mem);font-weight:600}
+
+  /* eval checklist */
+  .checks{display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;margin-top:12px}
+  @media (max-width:620px){.checks{grid-template-columns:1fr}}
+  .checks div{position:relative;padding-inline-start:24px;font-size:13.5px;color:var(--ink-2)}
+  .checks div::before{content:"✓";position:absolute;inset-inline-start:0;width:17px;height:17px;border-radius:5px;
+    background:var(--eval-soft);color:var(--eval);border:1px solid var(--eval);font-size:11px;font-weight:700;
+    display:flex;align-items:center;justify-content:center}
+
+  /* connectors */
+  .arrow{width:2px;height:38px;background:var(--arrow);position:relative;flex-shrink:0}
+  .arrow::after{content:"";position:absolute;bottom:-1px;left:50%;transform:translateX(-50%);
+    border:6px solid transparent;border-top-color:var(--arrow);border-bottom:0}
+  .arrow.lbl-wrap{display:flex}
+  .arrow .albl{position:absolute;top:50%;transform:translateY(-50%);inset-inline-start:12px;white-space:nowrap;
+    font-size:11.5px;color:var(--muted);font-family:var(--mono)}
+  .arrow.short{height:26px}
+
+  /* loop-back pill */
+  .loopback{max-width:680px;width:100%;margin-top:16px;display:flex;align-items:center;gap:10px;
+    border:1.6px dashed var(--mem);border-radius:12px;padding:11px 16px;background:var(--mem-soft);
+    color:var(--mem);font-size:13.5px;font-weight:600}
+  .loopback .ic{font-size:18px;line-height:1}
+
+  /* callout */
+  .callout{max-width:820px;margin:26px auto 0;border:1px solid var(--frame);border-inline-start:3px solid var(--accent);
+    background:var(--paper);border-radius:12px;padding:14px 18px;font-size:13.5px;color:var(--ink-2)}
+  .callout b{color:var(--ink)}
+
+  /* ===== orchestrator side-figure ===== */
+  .orchfig{margin-top:8px;width:100%;max-width:760px;background:var(--paper);border:1.6px solid var(--frame);
+    border-radius:16px;padding:18px 16px 10px;box-shadow:var(--shadow)}
+  .orchfig .figtitle{text-align:center;font-family:var(--serif);font-weight:700;font-size:15.5px;color:var(--navy);margin-bottom:2px}
+  .orchfig .figsub{text-align:center;font-family:var(--mono);font-size:11px;color:var(--faint);margin-bottom:6px}
+  .orchfig svg{width:100%;height:auto;display:block}
+  .orchfig .figcap{font-size:12.5px;color:var(--muted);text-align:center;margin:8px auto 2px;
+    padding-top:10px;border-top:1px solid var(--frame);line-height:1.75;max-width:66ch;margin-inline:auto}
+  .orchfig .figcap b{color:var(--ink-2)}
+
+  .obox{fill:var(--accent-soft);stroke:var(--accent);stroke-width:2}
+  .abox{fill:var(--run-soft);stroke:var(--run);stroke-width:1.7}
+  .tbox{fill:var(--opt-soft);stroke:var(--opt-stroke);stroke-width:1.6;stroke-dasharray:6 5}
+  .pipearrow{fill:none;stroke:var(--campaign);stroke-width:2.4}
+  .spinearrow{fill:none;stroke:var(--chat);stroke-width:1.8;stroke-dasharray:5 4}
+  .otitle{fill:var(--accent);font-family:var(--sans);font-weight:700;font-size:14.5px}
+  .osub{fill:var(--muted);font-family:var(--mono);font-size:10.5px}
+  .atitle{fill:var(--ink);font-family:var(--sans);font-weight:700;font-size:13.5px}
+  .asub{fill:var(--muted);font-family:var(--sans);font-size:11px}
+  .ttitle{fill:var(--ink-2);font-family:var(--sans);font-weight:700;font-size:12.5px}
+  .tsub{fill:var(--faint);font-family:var(--mono);font-size:10px}
+  .lane2{fill:var(--opt-stroke);font-family:var(--mono);font-size:10.5px;letter-spacing:.08em}
+  .anum-c{fill:var(--run)}
+  .anum-t{fill:#fff;font-family:var(--mono);font-weight:700;font-size:12px}
+  .spinelbl{fill:var(--chat);font-family:var(--sans);font-weight:700;font-size:12px}
+  .campaignlbl{fill:var(--campaign);font-family:var(--sans);font-weight:700;font-size:12px}
+  .contlbl{fill:var(--muted);font-family:var(--mono);font-size:11px}
+
+  /* steps text */
+  .steps{max-width:820px;margin:30px auto 0}
+  .steps h2{font-family:var(--serif);font-size:19px;color:var(--navy);border-bottom:2px solid var(--accent);
+    padding-bottom:7px;display:inline-block}
+  ol.sl{counter-reset:s;list-style:none;padding:0;margin:16px 0 0}
+  ol.sl li{position:relative;padding:9px 48px 9px 14px;margin:0 0 8px;background:var(--paper);
+    border:1px solid var(--frame);border-radius:10px;font-size:13.5px;color:var(--ink-2)}
+  ol.sl li::before{counter-increment:s;content:counter(s);position:absolute;top:12px;inset-inline-start:12px;
+    width:24px;height:24px;border-radius:7px;background:var(--accent-soft);color:var(--accent);
+    font-family:var(--mono);font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center}
+  ol.sl b{color:var(--ink)}
+
+  @media print{.toolbar{display:none}body{background:#fff}.node,.legend,.callout,ol.sl li,.orchfig{box-shadow:none}}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="pg">
+    <div class="kicker">AI Marketing OS · Full System Workflow</div>
+    <h1>الورك فلو الكامل للنظام</h1>
+    <p>من إدخال البراند وبناء النمط → الذاكرة → التشغيل والإنتاج (وكيل منسّق) → التقييم (حلقة مغلقة)</p>
+    <div class="toolbar">
+      <button id="themebtn">🌙 الوضع الليلي</button>
+      <button onclick="window.print()">🖨️ طباعة / حفظ PDF</button>
+    </div>
+  </header>
+
+  <!-- Legend -->
+  <div class="legend">
+    <div class="lg"><span class="sw start"></span> بداية / نهاية</div>
+    <div class="lg"><span class="sw opt"></span> خطوة اختيارية / خدمة خارجية</div>
+    <div class="lg"><span class="sw model"></span> موديل ذكاء اصطناعي</div>
+    <div class="lg"><span class="sw mem"></span> الذاكرة (Memory)</div>
+    <div class="lg"><span class="sw run"></span> تشغيل / إنتاج / وكيل</div>
+    <div class="lg"><span class="sw orch"></span> وكيل تنسيق (Orchestrator)</div>
+    <div class="lg"><span class="sw eval"></span> تقييم</div>
+  </div>
+
+  <!-- ===================== FLOW ===================== -->
+  <div class="flow">
+
+    <!-- PHASE 1 -->
+    <div class="phase">
+      <div class="phase-tag">المرحلة ١ · التحضير وبناء النمط</div>
+
+      <div class="node n-start">
+        <span class="step">1</span>
+        <h3>إدخال هوية البراند</h3>
+        <p class="desc">يُدخِل المستخدم عناصر العلامة التجارية: <b>الألوان</b> · <b>الطابع/النبرة</b> · <b>اللوغو أو التيمبليت</b>.</p>
+      </div>
+
+      <div class="arrow"></div>
+
+      <div class="node n-opt">
+        <span class="step">2</span>
+        <span class="tag">اختياري</span>
+        <h3>استيراد المنشورات السابقة</h3>
+        <p class="desc">تغذية النظام بأمثلة سابقة ليتعلّم منها النمط — بإحدى طريقتين:</p>
+        <div class="opts">
+          <div class="opt">
+            <span class="lbl">طريقة أ</span>
+            <b>إدخال يدوي</b>
+            <p>لصق المنشورات/التصاميم السابقة مباشرةً.</p>
+          </div>
+          <div class="opt">
+            <span class="lbl">طريقة ب</span>
+            <b>ربط فيسبوك عبر API</b>
+            <p>يمنح المستخدم الإذن، فيُستخرَج المنشورات تلقائيًا من صفحته.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="arrow"></div>
+
+      <div class="node n-model">
+        <span class="step">3</span>
+        <h3>موديل تعلّم النمط</h3>
+        <p class="desc">يتعلّم النمط من المنشورات السابقة عبر نموذجين متخصّصين:</p>
+        <div class="opts">
+          <div class="opt">
+            <span class="lbl">نموذج ١</span>
+            <b>نمط الكتابة (نصّ)</b>
+            <p>أسلوب الصياغة، النبرة، تركيب الجُمل، الـ CTA.</p>
+          </div>
+          <div class="opt">
+            <span class="lbl">نموذج ٢</span>
+            <b>النمط البصري (صور)</b>
+            <p>الألوان، التكوين، الطابع البصري للتصاميم.</p>
+          </div>
+        </div>
+        <div class="out">◂ المخرَج: النمط المستخرَج (Pattern)</div>
+      </div>
+    </div>
+
+    <div class="arrow lbl-wrap"><span class="albl">النمط المستخرَج ←</span></div>
+
+    <!-- PHASE 2 -->
+    <div class="phase">
+      <div class="phase-tag">المرحلة ٢ · الذاكرة</div>
+
+      <div class="node n-mem">
+        <span class="step">4</span>
+        <h3>🧠 الذاكرة (Memory)</h3>
+        <p class="desc">المحور المركزي — تُخزَّن فيها النتائج وتُغذّى منها كل المراحل التالية، وتعود إليها التغذية الراجعة:</p>
+        <div class="chips">
+          <span class="chip">النمط المستخرَج</span>
+          <span class="chip">بيانات البراند</span>
+          <span class="chip">الفيدباك ونتائج التقييم</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="arrow"></div>
+
+    <!-- PHASE 3 -->
+    <div class="phase">
+      <div class="phase-tag">المرحلة ٣ · التشغيل والإنتاج</div>
+
+      <div class="node" style="border-color:var(--run)">
+        <span class="step" style="background:var(--run)">5</span>
+        <h3>اختيار الوضع وتوليد المحتوى</h3>
+        <p class="desc">يعتمد على النمط + الذاكرة، ويحدَّد وضع الطلب:</p>
+        <div class="opts">
+          <div class="opt">
+            <span class="lbl">وضع أ</span>
+            <b>مساعد ذكي</b>
+            <p>طلب حرّ بلغة طبيعية (شات) لتوليد محتوى مفرد.</p>
+          </div>
+          <div class="opt">
+            <span class="lbl">وضع ب</span>
+            <b>حملة إعلانية</b>
+            <ul>
+              <li>تحديد الأهداف مسبقًا</li>
+              <li>اختيار المنشورات المُراد تسويقها</li>
+              <li>إدخال التريند الرائج ضمنها</li>
+            </ul>
+          </div>
+        </div>
+        <div class="out">◂ يُنفَّذ الإنتاج عبر منظومة وكلاء منسّقة — التفصيل أدناه ⬇</div>
+      </div>
+
+      <div class="arrow short lbl-wrap"><span class="albl">تفصيل داخلي ↓</span></div>
+
+      <!-- ===================== ORCHESTRATOR SIDE-FIGURE ===================== -->
+      <figure class="orchfig">
+        <div class="figtitle">تفصيل داخلي — نمط الوكيل المنسّق (Orchestrator Pattern)</div>
+        <div class="figsub">هذا الفرع يوسّع الخطوة ٥ ولا يُضاف كخطوة رئيسية جديدة</div>
+        <svg viewBox="0 0 920 1050" role="img" aria-label="مخطط بنية الوكيل المنسّق وسلسلة الوكلاء الثمانية">
+          <defs>
+            <marker id="arw3" markerWidth="10" markerHeight="10" refX="7.5" refY="3.2" orient="auto" markerUnits="userSpaceOnUse">
+              <path d="M0,0 L8,3.2 L0,6.4 Z" fill="var(--campaign)"/>
+            </marker>
+            <marker id="arwd3" markerWidth="9" markerHeight="9" refX="6.6" refY="3" orient="auto" markerUnits="userSpaceOnUse">
+              <path d="M0,0 L7,3 L0,6 Z" fill="var(--chat)"/>
+            </marker>
+          </defs>
+
+          <!-- pipeline arrows (solid, sequential) -->
+          <path class="pipearrow" marker-end="url(#arw3)" d="M660,204 L660,250"/>
+          <path class="pipearrow" marker-end="url(#arw3)" d="M660,314 L660,360"/>
+          <path class="pipearrow" marker-end="url(#arw3)" d="M660,424 L660,470"/>
+          <path class="pipearrow" marker-end="url(#arw3)" d="M660,534 L660,580"/>
+          <path class="pipearrow" marker-end="url(#arw3)" d="M660,644 L660,690"/>
+          <path class="pipearrow" marker-end="url(#arw3)" d="M660,754 L660,800"/>
+          <path class="pipearrow" marker-end="url(#arw3)" d="M660,864 L660,910"/>
+          <path class="pipearrow" marker-end="url(#arw3)" d="M660,974 L660,1002"/>
+          <text class="contlbl" x="660" y="1020" text-anchor="middle">استمرار ← بعد الإنتاج</text>
+
+          <!-- orchestrator control spine (dashed) -->
+          <path class="spinearrow" d="M450,90 L450,110 L400,110 L400,942"/>
+          <path class="spinearrow" marker-end="url(#arwd3)" d="M400,172 L478,172"/>
+          <path class="spinearrow" marker-end="url(#arwd3)" d="M400,282 L478,282"/>
+          <path class="spinearrow" marker-end="url(#arwd3)" d="M400,392 L478,392"/>
+          <path class="spinearrow" marker-end="url(#arwd3)" d="M400,502 L478,502"/>
+          <path class="spinearrow" marker-end="url(#arwd3)" d="M400,612 L478,612"/>
+          <path class="spinearrow" marker-end="url(#arwd3)" d="M400,722 L478,722"/>
+          <path class="spinearrow" marker-end="url(#arwd3)" d="M400,832 L478,832"/>
+          <path class="spinearrow" marker-end="url(#arwd3)" d="M400,942 L478,942"/>
+          <text class="spinelbl" x="438" y="557" transform="rotate(90 438 557)" text-anchor="middle">في حال الدردشة مع المساعد الذكي: يوجّه المنسّق الطلب للوكيل المناسب</text>
+
+          <!-- campaign sequence label (right of the solid chain) -->
+          <text class="campaignlbl" x="866" y="557" transform="rotate(90 866 557)" text-anchor="middle">في حال إنشاء حملة إعلانية: يُنفَّذ هذا التسلسل بالترتيب</text>
+
+          <!-- trend tool → idea generating agent (box 4) -->
+          <path class="spinearrow" marker-end="url(#arwd3)" d="M335,502 L478,502"/>
+
+          <!-- Orchestrator -->
+          <g>
+            <rect class="box obox" x="250" y="20" width="400" height="70" rx="14"/>
+            <text class="otitle" x="450" y="48" text-anchor="middle">وكيل التنسيق — Orchestrator Agent</text>
+            <text class="osub" x="450" y="68" text-anchor="middle">ينسّق السلسلة ويستدعي كل وكيل بالترتيب</text>
+          </g>
+
+          <!-- Trend Tool (left lane, aligned with Idea agent) -->
+          <text class="lane2" x="210" y="454" text-anchor="middle">خدمة خارجية · TREND TOOL</text>
+          <g>
+            <rect class="box tbox" x="85" y="470" width="250" height="64" rx="9"/>
+            <text class="ttitle" x="210" y="497" text-anchor="middle">أداة التريند</text>
+            <text class="tsub" x="210" y="517" text-anchor="middle">Trend Tool · تريندات فيسبوك الرائجة</text>
+          </g>
+
+          <!-- Agent chain (right column) -->
+          <g>
+            <circle class="anum-c" cx="505" cy="172" r="12"/><text class="anum-t" x="505" y="176" text-anchor="middle">1</text>
+            <rect class="box abox" x="480" y="140" width="360" height="64" rx="10"/>
+            <text class="atitle" x="660" y="167" text-anchor="middle">وكيل البراند — Brand Agent</text>
+            <text class="asub" x="660" y="187" text-anchor="middle">يحلّل هوية البراند ويبني Brand Guide</text>
+          </g>
+          <g>
+            <circle class="anum-c" cx="505" cy="282" r="12"/><text class="anum-t" x="505" y="286" text-anchor="middle">2</text>
+            <rect class="box abox" x="480" y="250" width="360" height="64" rx="10"/>
+            <text class="atitle" x="660" y="277" text-anchor="middle">وكيل الاستراتيجية — Strategy Agent</text>
+            <text class="asub" x="660" y="297" text-anchor="middle">يحدّد الأهداف ويبني خطة المحتوى</text>
+          </g>
+          <g>
+            <circle class="anum-c" cx="505" cy="392" r="12"/><text class="anum-t" x="505" y="396" text-anchor="middle">3</text>
+            <rect class="box abox" x="480" y="360" width="360" height="64" rx="10"/>
+            <text class="atitle" x="660" y="387" text-anchor="middle">وكيل المنتج — Product Agent</text>
+            <text class="asub" x="660" y="407" text-anchor="middle">يجهّز سياق المنتجات المختارة للحملة</text>
+          </g>
+          <g>
+            <circle class="anum-c" cx="505" cy="502" r="12"/><text class="anum-t" x="505" y="506" text-anchor="middle">4</text>
+            <rect class="box abox" x="480" y="470" width="360" height="64" rx="10"/>
+            <text class="atitle" x="660" y="497" text-anchor="middle">وكيل توليد الأفكار — Idea Generating Agent</text>
+            <text class="asub" x="660" y="517" text-anchor="middle">فكرة قانونية لكل بوست (مبنية على التريند)</text>
+          </g>
+          <g>
+            <circle class="anum-c" cx="505" cy="612" r="12"/><text class="anum-t" x="505" y="616" text-anchor="middle">5</text>
+            <rect class="box abox" x="480" y="580" width="360" height="64" rx="10"/>
+            <text class="atitle" x="660" y="607" text-anchor="middle">وكيل كتابة المحتوى — Content Writer Agent</text>
+            <text class="asub" x="660" y="627" text-anchor="middle">Hook · Caption · CTA · Hashtags</text>
+          </g>
+          <g>
+            <circle class="anum-c" cx="505" cy="722" r="12"/><text class="anum-t" x="505" y="726" text-anchor="middle">6</text>
+            <rect class="box abox" x="480" y="690" width="360" height="64" rx="10"/>
+            <text class="atitle" x="660" y="717" text-anchor="middle">وكيل التصميم — Design Agent</text>
+            <text class="asub" x="660" y="737" text-anchor="middle">توليد الصورة وتركيبها على قالب البراند</text>
+          </g>
+          <g>
+            <circle class="anum-c" cx="505" cy="832" r="12"/><text class="anum-t" x="505" y="836" text-anchor="middle">7</text>
+            <rect class="box abox" x="480" y="800" width="360" height="64" rx="10"/>
+            <text class="atitle" x="660" y="827" text-anchor="middle">وكيل المراجعة — Review Agent</text>
+            <text class="asub" x="660" y="847" text-anchor="middle">تقييم جودة النص والتصميم قبل الاعتماد</text>
+          </g>
+          <g>
+            <circle class="anum-c" cx="505" cy="942" r="12"/><text class="anum-t" x="505" y="946" text-anchor="middle">8</text>
+            <rect class="box abox" x="480" y="910" width="360" height="64" rx="10"/>
+            <text class="atitle" x="660" y="937" text-anchor="middle">وكيل الجدولة — Schedule Agent</text>
+            <text class="asub" x="660" y="957" text-anchor="middle">يجدول المنشور المعتمد للنشر</text>
+          </g>
+        </svg>
+        <div class="figcap">
+          الأسهم <b style="color:var(--campaign)">الخضراء المتصلة</b> = مسار <b>الحملة الإعلانية</b>: يُنفَّذ هذا التسلسل بالترتيب من وكيل لآخر.
+          الخطوط <b style="color:var(--chat)">البنفسجية المتقطّعة</b> = مسار <b>الدردشة مع المساعد الذكي</b>: يوجّه <b>وكيل التنسيق (Orchestrator)</b>
+          الطلب للوكيل المناسب مباشرةً. وأداة التريند الخارجية تُستدعى من وكيل توليد الأفكار.
+        </div>
+      </figure>
+
+      <div class="arrow"></div>
+
+      <div class="node" style="border-color:var(--run)">
+        <span class="step" style="background:var(--run)">6</span>
+        <h3>بعد الإنتاج</h3>
+        <p class="desc">أمام المستخدم مساران:</p>
+        <div class="opts">
+          <div class="opt">
+            <span class="lbl">مسار أ</span>
+            <b>جدولة ونشر</b>
+            <p>اعتماد المحتوى وجدولته للنشر على فيسبوك.</p>
+          </div>
+          <div class="opt">
+            <span class="lbl">مسار ب</span>
+            <b>تعديل وملاحظات</b>
+            <p>إضافة تعديلات وملاحظات على المحتوى المولّد قبل اعتماده.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="arrow"></div>
+
+    <!-- PHASE 4 -->
+    <div class="phase">
+      <div class="phase-tag">المرحلة ٤ · التقييم</div>
+
+      <div class="node n-eval">
+        <span class="step">7</span>
+        <h3>التقييم — موديل أو نظام قاعدي</h3>
+        <p class="desc">قياس موضوعي للجودة والمطابقة على أربعة محاور:</p>
+        <div class="checks">
+          <div>مطابقة الكتابة للصورة</div>
+          <div>مطابقة كلٍّ منهما للعلامة التجارية</div>
+          <div>مطابقة خوارزميات النشر الصحيح على فيسبوك</div>
+          <div>تقييم هيكلية النظام كاملة</div>
+        </div>
+      </div>
+
+      <div class="loopback">
+        <span class="ic">↺</span>
+        <span>نتائج التقييم وملاحظات التعديل تعود إلى <b>الذاكرة</b> — فتتحسّن الجولات القادمة (حلقة مغلقة).</span>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="callout">
+    <b>ملاحظة:</b> الخطوات <b>٣ (موديل تعلّم النمط)</b>، <b>٢ب (ربط فيسبوك عبر API)</b>، وبنية <b>الوكيل المنسّق + سلسلة الوكلاء الثمانية</b>
+    داخل الخطوة ٥ هي التوسعة الأساسية عن النظام الحالي — فالنظام حاليًا يعتمد على وكلاء توليد + إطار تقييم قاعدي،
+    وهذا المخطط يمثّل <b>الرؤية الكاملة المستهدفة</b>.
+  </div>
+
+  <!-- Steps text -->
+  <div class="steps">
+    <h2>وصف الخطوات</h2>
+    <ol class="sl">
+      <li>يُدخِل المستخدم <b>هوية البراند</b> (الألوان، الطابع، اللوغو/التيمبليت).</li>
+      <li><b>(اختياري)</b> استيراد المنشورات السابقة — يدويًا أو عبر <b>ربط فيسبوك (API)</b> بإذن المستخدم.</li>
+      <li><b>موديل تعلّم النمط</b> يحلّل المنشورات (نموذج نصّ + نموذج صورة) ويُنتج <b>النمط المستخرَج</b>.</li>
+      <li>تُخزَّن في <b>الذاكرة</b>: النمط + بيانات البراند + الفيدباك/نتائج التقييم — كمصدر مشترك للمراحل التالية.</li>
+      <li>يختار المستخدم الوضع (<b>مساعد ذكي</b> أو <b>حملة إعلانية</b>)، وينفَّذ الإنتاج عبر <b>وكيل التنسيق (Orchestrator)</b>
+        الذي يستدعي بالترتيب: البراند ← الاستراتيجية ← المنتج ← توليد الأفكار (مع أداة التريند) ← كتابة المحتوى ← التصميم ← المراجعة ← الجدولة.</li>
+      <li>بعد الإنتاج: <b>جدولة ونشر</b>، أو <b>تعديل وملاحظات</b> على المحتوى قبل اعتماده.</li>
+      <li><b>التقييم</b> يقيس مطابقة النص↔الصورة، ومطابقة كلٍّ منهما للعلامة، ومطابقة خوارزميات فيسبوك، وهيكلية النظام —
+        ثم <b>تعود النتائج إلى الذاكرة</b>.</li>
+    </ol>
+  </div>
+</div>
+
+<script>
+  (function(){
+    var btn=document.getElementById('themebtn'), root=document.documentElement;
+    function cur(){var t=root.getAttribute('data-theme');return t?t:(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');}
+    function apply(t){root.setAttribute('data-theme',t);btn.textContent=t==='dark'?'☀️ الوضع النهاري':'🌙 الوضع الليلي';}
+    apply(cur());
+    btn.addEventListener('click',function(){apply(cur()==='dark'?'light':'dark');});
+  })();
+</script>
+</body>
+</html>

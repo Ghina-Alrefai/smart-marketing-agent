@@ -1,0 +1,77 @@
+{
+  "model_version": "brand-dna-1.1.0",
+  "training_rows": 50,
+  "class_distribution": {
+    "success": 25,
+    "failure": 25
+  },
+  "leakage_controls": [
+    "Fold-specific success centroids during cross-validation.",
+    "Leave-one-out success centroids for successful training rows.",
+    "Out-of-fold SHAP explanations for historical evidence.",
+    "No post-publication engagement field enters the predictor."
+  ],
+  "predesign_cv_metrics": {
+    "accuracy": 0.58,
+    "f1": 0.6037735849056604,
+    "precision": 0.5714285714285714,
+    "recall": 0.64,
+    "roc_auc": 0.6752,
+    "brier_score": 0.22224574870614286,
+    "log_loss": 0.6352766653935481,
+    "fold_metric_mean": {
+      "accuracy": 0.5800000000000001,
+      "f1": 0.6012587412587412,
+      "precision": 0.5933333333333334,
+      "recall": 0.64,
+      "roc_auc": 0.704,
+      "brier_score": 0.22224574870614283,
+      "log_loss": 0.6352766653935482
+    },
+    "fold_metric_std": {
+      "accuracy": 0.11661903789690603,
+      "f1": 0.10599922402158497,
+      "precision": 0.1218377792166471,
+      "recall": 0.14966629547095767,
+      "roc_auc": 0.18347751905887547,
+      "brier_score": 0.029212220014380074,
+      "log_loss": 0.06004008233502409
+    },
+    "probability_min": 0.23670681865574514,
+    "probability_max": 0.6849548331073997
+  },
+  "multimodal_cv_metrics": {
+    "accuracy": 0.56,
+    "f1": 0.5769230769230769,
+    "precision": 0.5555555555555556,
+    "recall": 0.6,
+    "roc_auc": 0.6768000000000001,
+    "brier_score": 0.22339017373022854,
+    "log_loss": 0.637604287625267,
+    "fold_metric_mean": {
+      "accuracy": 0.5599999999999999,
+      "f1": 0.5721678321678321,
+      "precision": 0.5733333333333334,
+      "recall": 0.6,
+      "roc_auc": 0.704,
+      "brier_score": 0.22339017373022857,
+      "log_loss": 0.6376042876252669
+    },
+    "fold_metric_std": {
+      "accuracy": 0.13564659966250536,
+      "f1": 0.1336702997459892,
+      "precision": 0.1420485050177501,
+      "recall": 0.1788854381999832,
+      "roc_auc": 0.18347751905887547,
+      "brier_score": 0.02993278595376595,
+      "log_loss": 0.061562090284698036
+    },
+    "probability_min": 0.23680755885843172,
+    "probability_max": 0.6870768198584607
+  },
+  "adaptive_memory_success_evidence_count": 25,
+  "brand_profile_version": "sha256:8d6d6c4db8e6deb4",
+  "training_data_hash": "sha256:1c4a2bea59c255d8e6089d21d5f6a3b339c42ada3daee8e397eef1d2d6825db7",
+  "recommended_minimum_policy_support": 5,
+  "warning": "The dataset is small. Use the probability as a ranking signal and keep human approval; do not interpret SHAP as causality."
+}

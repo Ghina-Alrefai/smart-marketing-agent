@@ -1,170 +1,157 @@
-# 🤖 AI Marketing OS
+# SmartSocial AI — النسخة المدمجة للجنة (v1.1.3)
 
-نظام تشغيل تسويقي مبني على الذكاء الاصطناعي — Multi-Agent System باستخدام Google ADK + Gemini.
+نسخة متكاملة من مشروع الفريق مع **Stable Brand DNA v1.1.0** و**Adaptive Memory**، مع الحفاظ على الـworkflow المتفق عليه:
 
----
+`Orchestrator → Brand → Strategy → Product → Idea → Candidates → Content/Design → Evaluation → Human Approval → Schedule → Performance → Memory`
 
-## 🏗 هيكل المشروع
+الدمج لا يستبدل منسّق الفريق أو واجهته. أضيفت طبقة ذكاء خلفية موحّدة تجعل كل فكرة تنتج ثلاثة مرشحين مضبوطين، تتحقق من بنيتهم وهوية البراند، ترتبهم بنموذج خاص بالصفحة عندما يكون متاحاً، تصلح المحاولة الضعيفة ضمن حد معلوم، ثم تحفظ مسار القرار كاملاً للمراجعة.
 
+## أهم ضمانات التصميم
+
+- **Brand DNA ثابت**: الهوية والنبرة والألوان والقيود مصدرها ملف الإصدار أو إدخال المستخدم، ولا تعدّلها الذاكرة تلقائياً.
+- **Adaptive Memory محكومة**: الأداء الفعلي يولّد Evidence؛ الأنماط تحتاج دعماً متكرراً وتحققاً؛ السياسات تبدأ `draft` ولا تصبح `active` بلا اعتماد بشري.
+- **الإنسان هو صاحب قرار النشر**: حتى المرشح الأعلى تقييماً يبقى `approved = false` إلى أن يضغط المستخدم اعتماد.
+- **Cold Start صادق**: الصفحة الجديدة تعمل مباشرة بقواعد الهوية والتحقق البنيوي، من دون استعارة نموذج البراق، ومن دون احتمال نجاح أو SHAP وهمي.
+- **تتبّع كامل**: كل منشور يحتفظ بالمرشحين الثلاثة، المرشح المختار، الإصدارات، الدرجات، السياسات المستخدمة، ومعرف trace.
+- **توقف آمن**: إذا فشلت المحاولات الثلاث أو بقيت الدرجات تحت البوابة، تكون الحالة `needs_review` ولا يحدث نشر تلقائي.
+- **تصميم بصري محكوم**: أصل بصري واحد هادئ لكل منشور؛ لا شبكات 3×3 أو Storyboard، ولا شعارات أو قوالب مولّدة عندما يوجد قالب مرفوع سيُركّب برمجياً.
+- **إعادة محاولة آمنة**: الحملة الفاشلة قابلة لإعادة التوليد من الواجهة بعد إزالة نواتجها الجزئية غير المعتمدة، مع حماية الموافقات وبيانات الأداء من الحذف.
+
+## البنية
+
+```text
+agents/                      وكلاء الفريق (مع محول Brand Agent الجديد)
+api/                         FastAPI + مسارات الذكاء الجديدة
+frontend/                    React/Vite + شاشة الذكاء والتعلم
+workflows/campaign_pipeline.py  الـworkflow الوحيد للحملات
+services/campaign_intelligence.py  دمج التوليد والتقييم والتصميم
+services/brand_intelligence_service.py  تهيئة DNA وحالة الصفحة ونتائج الأداء
+brand_dna/                   التنبؤ، SHAP، العقود، التحقق والإصلاح
+adaptive_memory/             Evidence → Insight → Draft Policy → Activation
+smart_social_contracts/      ملكية الميزات بين الوكلاء
+artifacts/                   نماذج Al Boraq وModel Card وBrand Profile
+outputs/                     أدلة OOF ونتائج التقييم التاريخية
+schema/                      عقود JSON للإدخال/التعلّم
+docs/                        شرح اللجنة، المعمارية، الاختبار، والـworkflow الأصلي
+scripts/                     إعداد، تشغيل، preload، demo، وفحص الإصدار
 ```
-ai_marketing_os/
-│
-├── agents/                  # وكلاء الذكاء الاصطناعي
-│   ├── brand/               # Brand Agent
-│   ├── strategy/            # Strategy Agent
-│   ├── product/             # Product Analysis Agent
-│   ├── content/             # Content Agent
-│   ├── design/              # Design Agent
-│   └── review/              # Review Agent
-│
-├── tools/                   # أدوات مشتركة (DB, Image Gen)
-├── services/                # خدمات (LLM service)
-├── prompts/                 # جميع الـ Prompts مركزياً
-├── database/                # SQLAlchemy Models + Session
-├── workflows/               # Pipeline الرئيسي
-├── api/                     # FastAPI Routers + Schemas
-├── frontend/                # React + Tailwind + Zustand
-├── uploads/                 # ملفات مرفوعة + صور مولّدة
-├── main.py                  # نقطة دخول FastAPI
-├── config.py                # إعدادات التطبيق
-└── requirements.txt
+
+## التشغيل السريع
+
+المتطلبات: Python 3.11 أو 3.12، Node.js 18+، وذاكرة كافية لتحميل نماذج embeddings.
+
+### Windows PowerShell
+
+```powershell
+Set-ExecutionPolicy -Scope Process Bypass
+.\scripts\setup.ps1
+# ضع GOOGLE_API_KEY داخل .env
+.\scripts\run.ps1
 ```
 
----
-
-## 🚀 التثبيت والتشغيل
-
-### 1. المتطلبات الأساسية
-- Python 3.11+
-- Node.js 18+
-
-### 2. إعداد البيئة
+### Linux/macOS
 
 ```bash
-# استنساخ المشروع
-git clone https://github.com/Ghina-Alrefai/smart-marketing-agent.git
-cd smart-marketing-agent
-
-# إنشاء virtual environment
-python -m venv venv
-source venv/bin/activate      # Linux/Mac
-# أو: venv\Scripts\activate   # Windows
-
-# تثبيت المكتبات
-pip install -r requirements.txt
+chmod +x scripts/setup.sh scripts/run.sh
+./scripts/setup.sh
+# ضع GOOGLE_API_KEY داخل .env
+./scripts/run.sh
 ```
 
-### 3. إعداد متغيرات البيئة
+بعد التشغيل:
+
+- التطبيق: `http://localhost:8000`
+- توثيق API: `http://localhost:8000/docs`
+- واجهة التطوير (اختياري): `cd frontend && npm run dev`
+
+قبل عرض دون إنترنت، شغّل مرة واحدة مع اتصال متاح:
 
 ```bash
-cp .env.example .env
+python scripts/preload_models.py
 ```
 
-افتح `.env` وضع مفتاح Google API الخاص بك:
+## متغيرات البيئة المهمة
 
-```
-GOOGLE_API_KEY=your_key_here
-```
+| المتغير | الغرض | الافتراضي |
+|---|---|---|
+| `GOOGLE_API_KEY` | Gemini للنص والصورة | مطلوب للتوليد الحقيقي |
+| `GEMINI_MODEL` | نموذج النص | `gemini-2.5-flash` |
+| `GEMINI_IMAGE_MODEL` | نموذج الصورة | `gemini-3.1-flash-image` |
+| `DATABASE_URL` | قاعدة التطبيق | `sqlite:///./marketing_os.db` |
+| `ADAPTIVE_MEMORY_DB` | مصدر حقيقة الذاكرة | `./outputs/adaptive_memory/app.db` |
+| `BRAND_DNA_MODEL_BRAND_KEYS` | الصفحات التي لها نموذج مسجل | `al-boraq` |
+| `BRAND_DNA_GENERATION_MAX_ATTEMPTS` | حد التوليد/الإصلاح | `3` |
+| `BRAND_DNA_MIN_CANDIDATE_PROBABILITY` | بوابة النموذج | `0.50` |
+| `COLD_START_MIN_TRAINING_POSTS` | الحد الإرشادي لبناء نموذج صفحة | `30` |
+| `DEFAULT_SCHEDULE_HOUR` | ساعة الجدولة بعد الاعتماد | `20` |
+| `LOG_LEVEL` | مستوى سجل التطبيق (`DEBUG/INFO/WARNING/ERROR`) | `INFO` |
+| `LOG_DIR` | مجلد ملفات السجل | `./logs` |
+| `LOG_TO_FILE` | حفظ السجل في ملف دوّار إضافةً إلى Terminal | `true` |
+| `SQL_ECHO` | طباعة SQL الخام للتشخيص المحلي المؤقت فقط | `false` |
 
-للحصول على مفتاح: https://aistudio.google.com/app/apikey
+انسخ `.env.example` إلى `.env` ولا تضع المفتاح داخل Git.
 
-### 4. تشغيل الـ 
-```
+## تشخيص الأخطاء والـLogger
 
-API docs متاحة على: http://localhost:8000/docs
-
-### 5. تشغيل الـ Frontend
+يعمل الـlogger تلقائياً عند تشغيل FastAPI. تظهر الأحداث في الـTerminal وتُحفظ في
+`logs/app.log`، وكل طلب يحمل `request_id` يظهر أيضاً للمستخدم داخل رسالة الخطأ.
+للمتابعة الحية:
 
 ```bash
-cd frontend
-npm install
-npm run dev
+tail -f logs/app.log
 ```
 
-التطبيق على: http://localhost:5173
+وفي Windows PowerShell:
 
----
-
-## 🔄 كيف يعمل النظام؟
-
-```
-المستخدم يُنشئ حملة
-       ↓
-[Brand Agent] تحليل هوية البراند
-       ↓
-[Strategy Agent] بناء خطة محتوى {N} أيام
-       ↓
-لكل يوم في الخطة:
-  ├── [Product Analysis Agent] تحليل المنتج
-  ├── [Content Agent] كتابة Hook + Caption + CTA + Hashtags
-  ├── [Design Agent] بناء Image Prompt + توليد الصورة
-  └── [Review Agent] مراجعة الجودة والموافقة
-       ↓
-عرض النتائج للمستخدم مع Approval Workflow
+```powershell
+Get-Content .\logs\app.log -Wait -Tail 100
 ```
 
----
+إذا فشل إنشاء البراند، ابحث في الملف عن رقم التتبع الظاهر في الواجهة. راجع
+`docs/DEBUGGING_LOGGING_AR.md` للخطوات الكاملة وأسباب الفشل المعروفة.
 
-## 📡 API Endpoints الرئيسية
+## فحص النسخة
 
-| Method | URL | الوصف |
-|--------|-----|-------|
-| POST | `/api/v1/users/` | إنشاء مستخدم |
-| POST | `/api/v1/brands/?user_id=` | إنشاء براند |
-| PATCH | `/api/v1/brands/{id}` | تحديث البراند |
-| POST | `/api/v1/brands/{id}/logo` | رفع اللوغو |
-| GET | `/api/v1/products/user/{user_id}` | قائمة المنتجات |
-| POST | `/api/v1/products/?user_id=` | إضافة منتج |
-| POST | `/api/v1/plans/?user_id=` | إنشاء خطة محتوى |
-| POST | `/api/v1/plans/{id}/generate` | بدء التوليد |
-| GET | `/api/v1/plans/{id}/status` | متابعة الحالة |
-| GET | `/api/v1/plans/{id}/posts` | جميع المنشورات |
-| PATCH | `/api/v1/plans/posts/{id}/approve` | اعتماد/رفض منشور |
+```bash
+python scripts/verify_release.py
+pytest -q
+python scripts/committee_demo.py
+cd frontend && npm run build
+```
 
----
+`committee_demo.py` ينشئ صفحة جديدة بلا تاريخ ويشغّل الحملة في `dry_run`؛ لا يستدعي Gemini ولا يدّعي احتمالاً إحصائياً.
 
-## 🧠 الـ Agents
+## نقاط API الجديدة
 
-| Agent | المهمة |
-|-------|--------|
-| **Brand Agent** | تحليل هوية البراند وبناء Brand Guidelines |
-| **Strategy Agent** | بناء خطة محتوى يومية متنوعة ومتوازنة |
-| **Product Analysis Agent** | استخراج الزوايا التسويقية المثلى للمنتج |
-| **Content Agent** | كتابة Hook + Caption + CTA + Hashtags |
-| **Design Agent** | بناء Image Prompt + توليد الصورة بـ Gemini |
-| **Review Agent** | مراجعة الجودة وتقييم التوافق مع البراند |
+| Method | Endpoint | الوظيفة |
+|---|---|---|
+| `POST` | `/api/v1/plans/{id}/regenerate` | تنظيف محاولة فاشلة غير معتمدة وإعادة توليدها بأمان |
+| `GET` | `/api/v1/intelligence/brands/{id}/status` | حالة DNA والنموذج والذاكرة |
+| `POST` | `/api/v1/intelligence/brands/{id}/initialize` | تهيئة ملف ثابت أو Cold Start |
+| `GET` | `/api/v1/intelligence/brands/{id}/profile` | الملف الفعّال وإصداره |
+| `POST` | `/api/v1/intelligence/brands/{id}/bootstrap-history` | إدخال دليل Al Boraq التاريخي بشكل idempotent |
+| `POST` | `/api/v1/intelligence/brands/{id}/consolidate` | تجميع Evidence والتحقق من Insights |
+| `POST` | `/api/v1/intelligence/brands/{id}/generate-policies` | إنشاء مسودات سياسات غير فعالة |
+| `GET` | `/api/v1/intelligence/brands/{id}/policies` | عرض السياسات وحالاتها |
+| `POST` | `/api/v1/intelligence/policies/{id}/activate` | اعتماد بشري صريح لسياسة |
+| `POST` | `/api/v1/intelligence/posts/{id}/performance` | تسجيل نتيجة منشور بعد 24h/72h مثلاً |
 
----
+## نتائج النموذج المضمّن
 
-## 🔑 متغيرات البيئة
+البيانات: 50 منشوراً من Al Boraq Telecom، موزعة 25 نجاح و25 فشل. التقييم OOF مع ضوابط لمنع التسرب.
 
-| المتغير | الوصف | القيمة الافتراضية |
-|---------|-------|------------------|
-| `GOOGLE_API_KEY` | مفتاح Google AI API | مطلوب |
-| `DATABASE_URL` | رابط قاعدة البيانات | `sqlite:///./marketing_os.db` |
-| `UPLOAD_DIR` | مجلد الملفات المرفوعة | `./uploads` |
-| `GEMINI_MODEL` | نموذج النصوص | `gemini-2.0-flash` |
-| `GEMINI_IMAGE_MODEL` | نموذج الصور | `gemini-2.0-flash-exp-image-generation` |
+| النموذج | Accuracy | F1 | ROC-AUC | Brier |
+|---|---:|---:|---:|---:|
+| Predesign | 0.58 | 0.604 | 0.675 | 0.222 |
+| Multimodal | 0.56 | 0.577 | 0.677 | 0.223 |
 
----
+هذه نتائج نموذج أولي على عينة صغيرة. الاحتمال يستخدم **للترتيب ودعم القرار** ولا يمثل ضمان أداء. وSHAP يشرح سلوك النموذج ولا يثبت علاقة سببية.
 
-## 📦 التقنيات المستخدمة
+## ملفات الشرح
 
-**Backend:** Python · FastAPI · Google ADK · SQLAlchemy · SQLite
+- `docs/COMMITTEE_GUIDE_AR.md`: شرح العرض من الصفر حتى النهاية وأسئلة متوقعة.
+- `docs/INTEGRATION_ARCHITECTURE.md`: ما أضيف وما استبدل وما بقي ثابتاً.
+- `docs/TESTING_GUIDE_AR.md`: سيناريوهات الاختبار والتحضير للعرض.
+- `docs/full_workflow.html`: الـworkflow البصري الأصلي المتفق عليه مع الفريق.
 
-**AI:** Google Gemini 2.0 Flash (نصوص + صور)
-
-**Frontend:** React 18 · Vite · Tailwind CSS · Zustand · React Query · React Router
-
----
-
-## 🗺 Roadmap
-
-- [x] Brand Onboarding
-- [x] Multi-Agent Content Pipeline
-- [x] Image Generation
-- [x] Human Approval Workflow
-- [ ] Publish to Social Media
-- [ ] Analytics Dashboard
-- [ ] Multi-brand Support
-- [ ] Scheduled Posts
+إصدار التطبيق: `1.1.3-integrated` — أغسطس 2026. إصدار Brand DNA المضمّن: `1.1.0`.

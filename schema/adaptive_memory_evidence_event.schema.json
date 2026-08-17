@@ -1,0 +1,257 @@
+{
+  "$defs": {
+    "AgentType": {
+      "enum": [
+        "CAMPAIGN_AGENT",
+        "COPYWRITER_AGENT",
+        "DESIGNER_AGENT",
+        "SCHEDULER_AGENT"
+      ],
+      "title": "AgentType",
+      "type": "string"
+    },
+    "EvidenceDirection": {
+      "enum": [
+        "supports_success",
+        "opposes_success",
+        "neutral"
+      ],
+      "title": "EvidenceDirection",
+      "type": "string"
+    },
+    "FeatureRole": {
+      "description": "How Adaptive Memory is allowed to use a model feature.",
+      "enum": [
+        "controllable",
+        "context",
+        "derived",
+        "brand_constraint"
+      ],
+      "title": "FeatureRole",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Immutable atomic evidence event derived from one post-feature attribution.",
+  "properties": {
+    "id": {
+      "title": "Id",
+      "type": "string"
+    },
+    "idempotency_key": {
+      "title": "Idempotency Key",
+      "type": "string"
+    },
+    "parent_event_id": {
+      "title": "Parent Event Id",
+      "type": "string"
+    },
+    "source_schema_version": {
+      "title": "Source Schema Version",
+      "type": "string"
+    },
+    "brand_id": {
+      "title": "Brand Id",
+      "type": "string"
+    },
+    "page_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Page Id"
+    },
+    "campaign_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Campaign Id"
+    },
+    "post_id": {
+      "title": "Post Id",
+      "type": "string"
+    },
+    "observation_window": {
+      "title": "Observation Window",
+      "type": "string"
+    },
+    "observed_at": {
+      "format": "date-time",
+      "title": "Observed At",
+      "type": "string"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "outcome_source": {
+      "default": "facebook",
+      "title": "Outcome Source",
+      "type": "string"
+    },
+    "attribution_source": {
+      "default": "brand_dna",
+      "title": "Attribution Source",
+      "type": "string"
+    },
+    "actual_success": {
+      "title": "Actual Success",
+      "type": "boolean"
+    },
+    "actual_performance": {
+      "additionalProperties": true,
+      "title": "Actual Performance",
+      "type": "object"
+    },
+    "predicted_success_probability": {
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Predicted Success Probability",
+      "type": "number"
+    },
+    "baseline_probability": {
+      "anyOf": [
+        {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Baseline Probability"
+    },
+    "model_version": {
+      "title": "Model Version",
+      "type": "string"
+    },
+    "explainer_version": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Explainer Version"
+    },
+    "brand_profile_version": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Brand Profile Version"
+    },
+    "model_quality_roc_auc": {
+      "anyOf": [
+        {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Model Quality Roc Auc"
+    },
+    "feature_name": {
+      "title": "Feature Name",
+      "type": "string"
+    },
+    "feature_value": {
+      "default": null,
+      "title": "Feature Value"
+    },
+    "feature_value_key": {
+      "title": "Feature Value Key",
+      "type": "string"
+    },
+    "owner_agent": {
+      "$ref": "#/$defs/AgentType"
+    },
+    "feature_role": {
+      "$ref": "#/$defs/FeatureRole"
+    },
+    "direction": {
+      "$ref": "#/$defs/EvidenceDirection"
+    },
+    "raw_shap_log_odds": {
+      "title": "Raw Shap Log Odds",
+      "type": "number"
+    },
+    "success_support_0_1": {
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Success Support 0 1",
+      "type": "number"
+    },
+    "success_opposition_0_1": {
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Success Opposition 0 1",
+      "type": "number"
+    },
+    "importance_0_1": {
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Importance 0 1",
+      "type": "number"
+    },
+    "context": {
+      "additionalProperties": true,
+      "title": "Context",
+      "type": "object"
+    },
+    "human_approval_required": {
+      "default": true,
+      "title": "Human Approval Required",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "idempotency_key",
+    "parent_event_id",
+    "source_schema_version",
+    "brand_id",
+    "post_id",
+    "observation_window",
+    "observed_at",
+    "actual_success",
+    "predicted_success_probability",
+    "model_version",
+    "feature_name",
+    "feature_value_key",
+    "owner_agent",
+    "feature_role",
+    "direction",
+    "raw_shap_log_odds",
+    "success_support_0_1",
+    "success_opposition_0_1",
+    "importance_0_1"
+  ],
+  "title": "EvidenceEvent",
+  "type": "object"
+}

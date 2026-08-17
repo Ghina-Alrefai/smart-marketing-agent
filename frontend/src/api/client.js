@@ -2,6 +2,45 @@ import axios from 'axios'
 
 const api = axios.create({ baseURL: '/api/v1', headers: { 'Content-Type': 'application/json' } })
 
+export const apiRequestId = (error) =>
+  error?.response?.headers?.['x-request-id'] || error?.response?.data?.request_id || null
+
+export const apiErrorMessage = (error, fallback = 'حدث خطأ غير متوقع') => {
+  const data = error?.response?.data
+  const detail = data?.detail
+  let message = fallback
+
+  if (typeof detail === 'string' && detail.trim()) {
+    message = detail
+  } else if (Array.isArray(detail) && detail.length > 0) {
+    message = detail.map((item) => {
+      const location = (item.loc || []).filter((part) => part !== 'body').join('.')
+      return `${location ? `${location}: ` : ''}${item.msg || 'قيمة غير صالحة'}`
+    }).join('، ')
+  } else if (typeof data?.message === 'string') {
+    message = data.message
+  } else if (error?.message) {
+    message = error.message
+  }
+
+  const requestId = apiRequestId(error)
+  return requestId ? `${message} — رقم التتبع: ${requestId}` : message
+}
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    console.error('[SmartSocial API error]', {
+      method: error?.config?.method,
+      url: error?.config?.url,
+      status: error?.response?.status,
+      requestId: apiRequestId(error),
+      detail: error?.response?.data?.detail || error?.message,
+    })
+    return Promise.reject(error)
+  },
+)
+
 // Users
 export const createUser = (data) => api.post('/users/', data)
 export const getUser    = (id)   => api.get(`/users/${id}`)
@@ -43,9 +82,23 @@ export const listPlans        = (userId)        => api.get(`/plans/user/${userId
 export const getPlan          = (id)            => api.get(`/plans/${id}`)
 export const deletePlan       = (id)            => api.delete(`/plans/${id}`)
 export const triggerGeneration= (planId)        => api.post(`/plans/${planId}/generate`)
+export const regeneratePlan   = (planId)        => api.post(`/plans/${planId}/regenerate`)
 export const getPlanStatus    = (planId)        => api.get(`/plans/${planId}/status`)
 export const listPosts        = (planId)        => api.get(`/plans/${planId}/posts`)
 export const approvePost      = (postId, approved) => api.patch(`/plans/posts/${postId}/approve`, { approved })
+
+// Brand DNA + governed Adaptive Memory
+export const getIntelligenceStatus = (brandId) => api.get(`/intelligence/brands/${brandId}/status`)
+export const initializeIntelligence = (brandId, force = false) =>
+  api.post(`/intelligence/brands/${brandId}/initialize?force=${force}`)
+export const bootstrapBrandHistory = (brandId) => api.post(`/intelligence/brands/${brandId}/bootstrap-history`)
+export const consolidateMemory = (brandId) => api.post(`/intelligence/brands/${brandId}/consolidate`)
+export const generateMemoryPolicies = (brandId) => api.post(`/intelligence/brands/${brandId}/generate-policies`)
+export const listMemoryPolicies = (brandId) => api.get(`/intelligence/brands/${brandId}/policies`)
+export const activateMemoryPolicy = (policyId, approvedBy) =>
+  api.post(`/intelligence/policies/${policyId}/activate`, { approved_by: approvedBy })
+export const submitPostPerformance = (postId, data) =>
+  api.post(`/intelligence/posts/${postId}/performance`, data)
 
 // Chat (Orchestrator)
 export const sendChatMessage = (data) => api.post('/chat/message', data)

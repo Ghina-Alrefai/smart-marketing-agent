@@ -1,0 +1,198 @@
+{
+  "$defs": {
+    "AgentType": {
+      "enum": [
+        "CAMPAIGN_AGENT",
+        "COPYWRITER_AGENT",
+        "DESIGNER_AGENT",
+        "SCHEDULER_AGENT"
+      ],
+      "title": "AgentType",
+      "type": "string"
+    },
+    "FeatureRole": {
+      "description": "How Adaptive Memory is allowed to use a model feature.",
+      "enum": [
+        "controllable",
+        "context",
+        "derived",
+        "brand_constraint"
+      ],
+      "title": "FeatureRole",
+      "type": "string"
+    },
+    "InsightStatus": {
+      "enum": [
+        "candidate",
+        "validated",
+        "rejected",
+        "deprecated"
+      ],
+      "title": "InsightStatus",
+      "type": "string"
+    },
+    "Recommendation": {
+      "enum": [
+        "prefer",
+        "avoid",
+        "monitor"
+      ],
+      "title": "Recommendation",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "title": "Id",
+      "type": "string"
+    },
+    "group_key": {
+      "title": "Group Key",
+      "type": "string"
+    },
+    "brand_id": {
+      "title": "Brand Id",
+      "type": "string"
+    },
+    "target_agent": {
+      "$ref": "#/$defs/AgentType"
+    },
+    "feature_name": {
+      "title": "Feature Name",
+      "type": "string"
+    },
+    "feature_value": {
+      "default": null,
+      "title": "Feature Value"
+    },
+    "feature_role": {
+      "$ref": "#/$defs/FeatureRole"
+    },
+    "recommendation": {
+      "$ref": "#/$defs/Recommendation"
+    },
+    "description": {
+      "title": "Description",
+      "type": "string"
+    },
+    "context_conditions": {
+      "additionalProperties": true,
+      "title": "Context Conditions",
+      "type": "object"
+    },
+    "evidence_ids": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Evidence Ids",
+      "type": "array"
+    },
+    "support_count": {
+      "minimum": 0,
+      "title": "Support Count",
+      "type": "integer"
+    },
+    "success_count": {
+      "minimum": 0,
+      "title": "Success Count",
+      "type": "integer"
+    },
+    "failure_count": {
+      "minimum": 0,
+      "title": "Failure Count",
+      "type": "integer"
+    },
+    "actual_success_rate_0_1": {
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Actual Success Rate 0 1",
+      "type": "number"
+    },
+    "direction_consistency_0_1": {
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Direction Consistency 0 1",
+      "type": "number"
+    },
+    "mean_success_support_0_1": {
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Mean Success Support 0 1",
+      "type": "number"
+    },
+    "mean_failure_opposition_0_1": {
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Mean Failure Opposition 0 1",
+      "type": "number"
+    },
+    "mean_importance_0_1": {
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Mean Importance 0 1",
+      "type": "number"
+    },
+    "confidence_0_1": {
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Confidence 0 1",
+      "type": "number"
+    },
+    "source_model_versions": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Source Model Versions",
+      "type": "array"
+    },
+    "status": {
+      "$ref": "#/$defs/InsightStatus",
+      "default": "candidate"
+    },
+    "validation_reasons": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Validation Reasons",
+      "type": "array"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "updated_at": {
+      "format": "date-time",
+      "title": "Updated At",
+      "type": "string"
+    },
+    "expires_at": {
+      "format": "date-time",
+      "title": "Expires At",
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "group_key",
+    "brand_id",
+    "target_agent",
+    "feature_name",
+    "feature_role",
+    "recommendation",
+    "description",
+    "evidence_ids",
+    "support_count",
+    "success_count",
+    "failure_count",
+    "actual_success_rate_0_1",
+    "direction_consistency_0_1",
+    "mean_success_support_0_1",
+    "mean_failure_opposition_0_1",
+    "mean_importance_0_1",
+    "confidence_0_1"
+  ],
+  "title": "Insight",
+  "type": "object"
+}

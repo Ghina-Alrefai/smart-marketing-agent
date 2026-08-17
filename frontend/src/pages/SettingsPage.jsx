@@ -3,7 +3,7 @@ import { useMutation } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { User } from 'lucide-react'
 import useStore from '../store'
-import { createUser } from '../api/client'
+import { apiErrorMessage, createUser } from '../api/client'
 
 export default function SettingsPage() {
   const { user, setUser } = useStore()
@@ -16,8 +16,7 @@ export default function SettingsPage() {
       toast.success('تم حفظ الإعدادات ✅')
     },
     onError: (err) => {
-      if (err.response?.status === 409) toast.error('البريد الإلكتروني مسجل مسبقاً')
-      else toast.error('حدث خطأ')
+      toast.error(apiErrorMessage(err), { duration: 7000 })
     },
   })
 

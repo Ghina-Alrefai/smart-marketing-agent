@@ -12,6 +12,7 @@ import CampaignsPage from './pages/CampaignsPage'
 import NewCampaignPage from './pages/NewCampaignPage'
 import CampaignDetailPage from './pages/CampaignDetailPage'
 import SettingsPage from './pages/SettingsPage'
+import IntelligencePage from './pages/IntelligencePage'
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
@@ -30,6 +31,7 @@ const router = createBrowserRouter([
       { path: 'campaigns/new', element: <NewCampaignPage /> },
       { path: 'campaigns/:id', element: <CampaignDetailPage /> },
       { path: 'scheduled', element: <ScheduledPage /> },
+      { path: 'intelligence', element: <IntelligencePage /> },
       { path: 'settings', element: <SettingsPage /> },
     ],
   },

@@ -1,6 +1,10 @@
+import { useEffect } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
-import { LayoutDashboard, Megaphone, Package, Sparkles, Settings, MessageCircle, CalendarClock } from 'lucide-react'
+import toast from 'react-hot-toast'
+import { LayoutDashboard, Megaphone, Package, Sparkles, Settings, MessageCircle, CalendarClock, BrainCircuit } from 'lucide-react'
 import clsx from 'clsx'
+import useStore from '../store'
+import { getUser } from '../api/client'
 
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'الرئيسية' },
@@ -9,10 +13,28 @@ const navItems = [
   { to: '/products', icon: Package, label: 'المنتجات' },
   { to: '/campaigns', icon: Megaphone, label: 'الحملات' },
   { to: '/scheduled', icon: CalendarClock, label: 'المجدولة' },
+  { to: '/intelligence', icon: BrainCircuit, label: 'الذكاء والتعلّم' },
   { to: '/settings', icon: Settings, label: 'الإعدادات' },
 ]
 
 export default function AppLayout() {
+  const { user, setUser, setActiveBrandId } = useStore()
+
+  useEffect(() => {
+    if (!user?.id) return undefined
+    let cancelled = false
+
+    getUser(user.id).catch((error) => {
+      if (!cancelled && error.response?.status === 404) {
+        setUser(null)
+        setActiveBrandId(null)
+        toast.error('بيانات المستخدم المحلية قديمة. أنشئ المستخدم من شاشة الإعدادات ثم أعد إنشاء البراند.')
+      }
+    })
+
+    return () => { cancelled = true }
+  }, [user?.id, setUser, setActiveBrandId])
+
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
       {/* Sidebar */}

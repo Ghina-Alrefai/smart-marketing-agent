@@ -8,6 +8,7 @@ import {
   uploadBrandTemplate,
   addBrandExample, listBrandExamples,
   uploadDesignExample, deleteExample,
+  apiErrorMessage, apiRequestId,
 } from '../api/client'
 
 const TONE_OPTIONS   = ['ودّي','احترافي','شبابي','فاخر','مضحك','جريء','بسيط']
@@ -95,6 +96,9 @@ export default function BrandPage() {
 
   const saveMutation = useMutation({
     mutationFn: async (data) => {
+      if (!user?.id) {
+        throw new Error('لا يوجد مستخدم صالح. افتح الإعدادات وأنشئ المستخدم أولاً.')
+      }
       const payload = {
         ...data,
         tone_of_voice:  data.tone_of_voice.join('، '),
@@ -106,7 +110,14 @@ export default function BrandPage() {
       }
       const res = activeBrand && !showAdd ? await updateBrand(activeBrand.id, payload) : await createBrand(user.id, payload)
       const brand = res.data
-      if (templateFile) await uploadBrandTemplate(brand.id, templateFile)
+      if (templateFile) {
+        try {
+          await uploadBrandTemplate(brand.id, templateFile)
+        } catch (error) {
+          error.brandWasSaved = brand
+          throw error
+        }
+      }
       return brand
     },
     onSuccess: (brand) => {
@@ -114,7 +125,20 @@ export default function BrandPage() {
       qc.invalidateQueries(['brands']); setShowAdd(false); setTemplateFile(null)
       toast.success('تم حفظ البراند ✅')
     },
-    onError: () => toast.error('حدث خطأ'),
+    onError: (error) => {
+      if (error.brandWasSaved) {
+        setActiveBrandId(error.brandWasSaved.id)
+        setActiveBrand(error.brandWasSaved)
+        qc.invalidateQueries(['brands'])
+      }
+      console.error('[Brand save failed]', {
+        status: error.response?.status,
+        requestId: apiRequestId(error),
+        brandWasSaved: !!error.brandWasSaved,
+      })
+      const prefix = error.brandWasSaved ? 'تم حفظ البراند، لكن فشل رفع القالب: ' : ''
+      toast.error(`${prefix}${apiErrorMessage(error)}`, { duration: 8000 })
+    },
   })
 
   const addTextMutation = useMutation({

@@ -4,7 +4,9 @@ The generation pipeline runs in a background thread so the API responds immediat
 """
 from __future__ import annotations
 
+import logging
 import threading
+from collections import Counter
 from datetime import datetime, time, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
@@ -17,8 +19,15 @@ from api.schemas import (
     PostApprovalUpdate,
     GenerationStatusOut,
 )
-from database.models import ContentPlan, GeneratedPost
+from database.models import (
+    ContentPlan,
+    GeneratedPost,
+    PostPerformanceSnapshot,
+    Product,
+    ScheduledPost,
+)
 from database.session import get_db
+from config import settings
 from tools.db_tools import (
     create_scheduled_post,
     get_scheduled_by_post,
@@ -27,8 +36,9 @@ from tools.db_tools import (
 from workflows.campaign_pipeline import run_campaign_pipeline
 
 router = APIRouter(prefix="/plans", tags=["plans"])
+logger = logging.getLogger("smartsocial.plans")
 
-PEAK_HOUR = 20   # وقت الذروة الافتراضي للتفاعل: 8 مساءً
+PEAK_HOUR = settings.DEFAULT_SCHEDULE_HOUR
 
 
 # ── Content Plans ──────────────────────────────────────────────────────────
@@ -95,6 +105,95 @@ def generation_status(plan_id: int, db: Session = Depends(get_db)):
         plan_id=plan_id,
         status=plan.status,
         posts_generated=posts_count,
+        message=plan.error_message if plan.status == "failed" else None,
+        current_stage=plan.current_stage,
+        error_message=plan.error_message,
+    )
+
+
+@router.post("/{plan_id}/regenerate", response_model=GenerationStatusOut)
+def regenerate_failed_plan(
+    plan_id: int,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
+    """Safely replace partial output from a failed attempt, then run it again."""
+    plan = db.query(ContentPlan).filter(ContentPlan.id == plan_id).first()
+    if not plan:
+        raise HTTPException(404, "Plan not found")
+    if plan.status != "failed":
+        raise HTTPException(409, "يمكن إعادة التوليد فقط عندما تكون حالة الحملة «فشلت».")
+
+    partial_posts = (
+        db.query(GeneratedPost)
+        .filter(GeneratedPost.content_plan_id == plan_id)
+        .all()
+    )
+    post_ids = [post.id for post in partial_posts]
+
+    # Never destroy human decisions or observed performance evidence.
+    if any(post.approved for post in partial_posts):
+        raise HTTPException(
+            409,
+            "لا يمكن إعادة هذه الحملة تلقائياً لأن بعض منشوراتها معتمدة. ألغِ الاعتماد أو أنشئ حملة جديدة.",
+        )
+    if post_ids and (
+        db.query(PostPerformanceSnapshot)
+        .filter(PostPerformanceSnapshot.generated_post_id.in_(post_ids))
+        .first()
+    ):
+        raise HTTPException(
+            409,
+            "لا يمكن حذف المحاولة لأنها تحتوي بيانات أداء محفوظة. أنشئ حملة جديدة للحفاظ على سجل التعلّم.",
+        )
+
+    product_counts = Counter(
+        post.product_id for post in partial_posts if post.product_id is not None
+    )
+
+    try:
+        if post_ids:
+            db.query(ScheduledPost).filter(
+                ScheduledPost.generated_post_id.in_(post_ids)
+            ).delete(synchronize_session=False)
+            db.query(PostPerformanceSnapshot).filter(
+                PostPerformanceSnapshot.generated_post_id.in_(post_ids)
+            ).delete(synchronize_session=False)
+            db.query(GeneratedPost).filter(
+                GeneratedPost.id.in_(post_ids)
+            ).delete(synchronize_session=False)
+
+        for product_id, removed_count in product_counts.items():
+            product = db.query(Product).filter(Product.id == product_id).first()
+            if not product:
+                continue
+            product.post_count = max(0, (product.post_count or 0) - removed_count)
+            product.is_marketed = product.post_count > 0
+
+        plan.strategy = {}
+        plan.campaign_data = {}
+        plan.intelligence_summary = {}
+        plan.status = "generating"
+        plan.current_stage = "بانتظار إعادة التوليد"
+        plan.error_message = None
+        db.commit()
+    except Exception:
+        db.rollback()
+        logger.exception("campaign.regeneration_cleanup_failed plan_id=%s", plan_id)
+        raise HTTPException(500, "تعذّر تنظيف المحاولة الفاشلة؛ لم تبدأ إعادة التوليد.")
+
+    logger.info(
+        "campaign.regeneration_started plan_id=%s removed_partial_posts=%s",
+        plan_id,
+        len(post_ids),
+    )
+    background_tasks.add_task(run_campaign_pipeline, plan_id)
+    return GenerationStatusOut(
+        plan_id=plan_id,
+        status="started",
+        posts_generated=0,
+        current_stage=plan.current_stage,
+        message="تم تنظيف المحاولة الفاشلة وبدأت إعادة توليد الحملة.",
     )
 
 

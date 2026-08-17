@@ -1,0 +1,407 @@
+{
+  "$defs": {
+    "ActualPerformance": {
+      "additionalProperties": true,
+      "properties": {
+        "relative_performance_index": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Relative Performance Index"
+        },
+        "weighted_engagement": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Weighted Engagement"
+        },
+        "reactions": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reactions"
+        },
+        "comments": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Comments"
+        },
+        "shares": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Shares"
+        },
+        "reach": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reach"
+        },
+        "clicks": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Clicks"
+        }
+      },
+      "title": "ActualPerformance",
+      "type": "object"
+    },
+    "AgentType": {
+      "enum": [
+        "CAMPAIGN_AGENT",
+        "COPYWRITER_AGENT",
+        "DESIGNER_AGENT",
+        "SCHEDULER_AGENT"
+      ],
+      "title": "AgentType",
+      "type": "string"
+    },
+    "AttributionSource": {
+      "additionalProperties": false,
+      "properties": {
+        "outcome_source": {
+          "default": "facebook",
+          "title": "Outcome Source",
+          "type": "string"
+        },
+        "attribution_source": {
+          "default": "brand_dna",
+          "title": "Attribution Source",
+          "type": "string"
+        }
+      },
+      "title": "AttributionSource",
+      "type": "object"
+    },
+    "EvidenceDirection": {
+      "enum": [
+        "supports_success",
+        "opposes_success",
+        "neutral"
+      ],
+      "title": "EvidenceDirection",
+      "type": "string"
+    },
+    "FeatureAttributionInput": {
+      "additionalProperties": false,
+      "properties": {
+        "feature": {
+          "title": "Feature",
+          "type": "string"
+        },
+        "value": {
+          "default": null,
+          "title": "Value"
+        },
+        "direction": {
+          "$ref": "#/$defs/EvidenceDirection"
+        },
+        "raw_shap_log_odds": {
+          "title": "Raw Shap Log Odds",
+          "type": "number"
+        },
+        "success_support_0_1": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Success Support 0 1",
+          "type": "number"
+        },
+        "success_opposition_0_1": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Success Opposition 0 1",
+          "type": "number"
+        },
+        "importance_0_1": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Importance 0 1",
+          "type": "number"
+        },
+        "owner_agent": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AgentType"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "feature_role": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FeatureRole"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "feature",
+        "direction",
+        "raw_shap_log_odds",
+        "success_support_0_1",
+        "success_opposition_0_1",
+        "importance_0_1"
+      ],
+      "title": "FeatureAttributionInput",
+      "type": "object"
+    },
+    "FeatureRole": {
+      "description": "How Adaptive Memory is allowed to use a model feature.",
+      "enum": [
+        "controllable",
+        "context",
+        "derived",
+        "brand_constraint"
+      ],
+      "title": "FeatureRole",
+      "type": "string"
+    }
+  },
+  "additionalProperties": true,
+  "description": "Versioned public contract received from Brand-DNA.\n\nThe model deliberately preserves SHAP attribution fields as attribution fields;\nnone of them is called confidence.",
+  "properties": {
+    "schema_version": {
+      "default": "brand-dna-am-evidence-v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "event_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Event Id"
+    },
+    "evidence_type": {
+      "title": "Evidence Type",
+      "type": "string"
+    },
+    "source": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/AttributionSource"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Source"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "observed_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Observed At"
+    },
+    "observation_window": {
+      "default": "24h",
+      "title": "Observation Window",
+      "type": "string"
+    },
+    "brand_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Brand Id"
+    },
+    "page_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Page Id"
+    },
+    "campaign_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Campaign Id"
+    },
+    "post_id": {
+      "title": "Post Id",
+      "type": "string"
+    },
+    "context": {
+      "additionalProperties": true,
+      "title": "Context",
+      "type": "object"
+    },
+    "brand_profile_version": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Brand Profile Version"
+    },
+    "model_version": {
+      "title": "Model Version",
+      "type": "string"
+    },
+    "explainer_version": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Explainer Version"
+    },
+    "model_quality": {
+      "additionalProperties": true,
+      "title": "Model Quality",
+      "type": "object"
+    },
+    "actual_success": {
+      "title": "Actual Success",
+      "type": "boolean"
+    },
+    "actual_performance": {
+      "$ref": "#/$defs/ActualPerformance"
+    },
+    "predicted_success_probability": {
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Predicted Success Probability",
+      "type": "number"
+    },
+    "baseline_probability": {
+      "anyOf": [
+        {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Baseline Probability"
+    },
+    "shap_units": {
+      "default": "log_odds",
+      "title": "Shap Units",
+      "type": "string"
+    },
+    "human_approval_required": {
+      "default": true,
+      "title": "Human Approval Required",
+      "type": "boolean"
+    },
+    "feature_attributions": {
+      "items": {
+        "$ref": "#/$defs/FeatureAttributionInput"
+      },
+      "title": "Feature Attributions",
+      "type": "array"
+    }
+  },
+  "required": [
+    "evidence_type",
+    "post_id",
+    "model_version",
+    "actual_success",
+    "predicted_success_probability",
+    "feature_attributions"
+  ],
+  "title": "BrandDNAEvidenceEnvelopeV1",
+  "type": "object"
+}

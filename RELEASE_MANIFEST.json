@@ -1,0 +1,44 @@
+{
+  "release": "SmartSocial AI Integrated Committee Edition",
+  "version": "1.1.3-integrated",
+  "prepared_at": "2026-08-17",
+  "workflow_decision": "The team's agreed workflow remains the only campaign orchestrator; Brand-DNA and Adaptive Memory are integrated behind its generation and evaluation interfaces.",
+  "model_scope": {
+    "registered_brand_keys": ["al-boraq"],
+    "other_brands": "cold_start_rules",
+    "cross_brand_model_reuse": false
+  },
+  "human_controls": {
+    "post_approval_required": true,
+    "policy_activation_required": true,
+    "automatic_publication": false
+  },
+  "design_generation_guardrails": {
+    "single_asset_per_post": true,
+    "carousel_cover_only": true,
+    "reel_thumbnail_only": true,
+    "external_template_owns_branding": true,
+    "calm_minimal_composition": true
+  },
+  "verification": {
+    "core_tests": "15 passed",
+    "python_files_parsed": 102,
+    "pdf_pages_visually_verified": 22,
+    "frontend_build_command": "cd frontend && npm ci && npm run build"
+  },
+  "sha256": {
+    "performance_predesign.joblib": "99025e064b999646ff659e2c7e572c705b1876c49d288d10e5e54ba281d514bd",
+    "performance_multimodal.joblib": "362073ea1250207490318d6fe2285dde462f5fffa87ac19e6298fc6c24e03e76",
+    "model_card.json": "cac3e49171c1279a33f2f73e3f5fca0037605e12705a93ac3ee170a4fbb6a5a0",
+    "brand_profile.json": "dcfc9ab58d54e58cc1e4b2e3064699ace79a7f797b5e6fad1a82c3e39d46f95e",
+    "full_workflow.html": "6eee8e30ec80691df581c3b8633e8b62fd434d7fb49da6c6ecde753657dfde0e",
+    "SmartSocial_AI_Committee_Guide_AR.pdf": "7cdd38b8e5709c8c41147b2f46c7c63eae806c39a6b2bc6d3fd5982f7606b676"
+  },
+  "scientific_limits": [
+    "The included page model uses 50 historical posts.",
+    "Probability is a ranking signal, not a guarantee.",
+    "SHAP explains the trained model and does not establish causality.",
+    "Adaptive Memory confidence is an engineering validation heuristic.",
+    "Cold-start pages receive no claimed probability or SHAP attribution."
+  ]
+}

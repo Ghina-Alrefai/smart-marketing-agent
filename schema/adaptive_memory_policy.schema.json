@@ -1,0 +1,165 @@
+{
+  "$defs": {
+    "AgentType": {
+      "enum": [
+        "CAMPAIGN_AGENT",
+        "COPYWRITER_AGENT",
+        "DESIGNER_AGENT",
+        "SCHEDULER_AGENT"
+      ],
+      "title": "AgentType",
+      "type": "string"
+    },
+    "PolicyRule": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "feature_name": {
+          "title": "Feature Name",
+          "type": "string"
+        },
+        "feature_value": {
+          "default": null,
+          "title": "Feature Value"
+        },
+        "conditions": {
+          "additionalProperties": true,
+          "title": "Conditions",
+          "type": "object"
+        },
+        "source_insight_id": {
+          "title": "Source Insight Id",
+          "type": "string"
+        },
+        "confidence_0_1": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence 0 1",
+          "type": "number"
+        },
+        "priority": {
+          "maximum": 5,
+          "minimum": 1,
+          "title": "Priority",
+          "type": "integer"
+        },
+        "is_hard_constraint": {
+          "default": false,
+          "title": "Is Hard Constraint",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "description",
+        "feature_name",
+        "source_insight_id",
+        "confidence_0_1",
+        "priority"
+      ],
+      "title": "PolicyRule",
+      "type": "object"
+    },
+    "PolicyStatus": {
+      "enum": [
+        "draft",
+        "active",
+        "paused",
+        "deprecated",
+        "rejected"
+      ],
+      "title": "PolicyStatus",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "title": "Id",
+      "type": "string"
+    },
+    "brand_id": {
+      "title": "Brand Id",
+      "type": "string"
+    },
+    "target_agent": {
+      "$ref": "#/$defs/AgentType"
+    },
+    "version": {
+      "minimum": 1,
+      "title": "Version",
+      "type": "integer"
+    },
+    "rules": {
+      "items": {
+        "$ref": "#/$defs/PolicyRule"
+      },
+      "title": "Rules",
+      "type": "array"
+    },
+    "source_insight_ids": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Source Insight Ids",
+      "type": "array"
+    },
+    "status": {
+      "$ref": "#/$defs/PolicyStatus",
+      "default": "draft"
+    },
+    "human_approval_required": {
+      "default": true,
+      "title": "Human Approval Required",
+      "type": "boolean"
+    },
+    "approved_by": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Approved By"
+    },
+    "approved_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Approved At"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "updated_at": {
+      "format": "date-time",
+      "title": "Updated At",
+      "type": "string"
+    }
+  },
+  "required": [
+    "brand_id",
+    "target_agent",
+    "version"
+  ],
+  "title": "Policy",
+  "type": "object"
+}

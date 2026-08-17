@@ -1,0 +1,753 @@
+{
+  "schema_version": "1.0",
+  "filter": "actual_success == true",
+  "successful_post_count": 25,
+  "failed_post_count_used_for_contrast": 25,
+  "interpretation": "Scores are normalized shares of the model's positive SHAP evidence among actual successful posts. They explain the model and are not causal effects.",
+  "feature_scores": [
+    {
+      "feature": "writing_style",
+      "successful_post_count": 25,
+      "mean_success_support_0_1": 0.1740661474,
+      "performance_weighted_support_0_1": 0.1748982236,
+      "positive_sign_rate_in_successes": 0.56,
+      "mean_raw_shap_success_log_odds": 0.0605678864,
+      "mean_raw_shap_failure_log_odds": -0.0572475153,
+      "success_minus_failure_raw_shap": 0.1178154017
+    },
+    {
+      "feature": "content_pillar",
+      "successful_post_count": 25,
+      "mean_success_support_0_1": 0.1669888171,
+      "performance_weighted_support_0_1": 0.1651166721,
+      "positive_sign_rate_in_successes": 0.88,
+      "mean_raw_shap_success_log_odds": 0.0491204905,
+      "mean_raw_shap_failure_log_odds": -0.0583527463,
+      "success_minus_failure_raw_shap": 0.1074732368
+    },
+    {
+      "feature": "tone",
+      "successful_post_count": 25,
+      "mean_success_support_0_1": 0.1399117512,
+      "performance_weighted_support_0_1": 0.1339139911,
+      "positive_sign_rate_in_successes": 0.76,
+      "mean_raw_shap_success_log_odds": 0.0345805421,
+      "mean_raw_shap_failure_log_odds": -0.0332963519,
+      "success_minus_failure_raw_shap": 0.067876894
+    },
+    {
+      "feature": "text_in_image",
+      "successful_post_count": 25,
+      "mean_success_support_0_1": 0.0827980019,
+      "performance_weighted_support_0_1": 0.0996693065,
+      "positive_sign_rate_in_successes": 0.56,
+      "mean_raw_shap_success_log_odds": 0.0213168037,
+      "mean_raw_shap_failure_log_odds": -0.0140102813,
+      "success_minus_failure_raw_shap": 0.035327085
+    },
+    {
+      "feature": "hook_style",
+      "successful_post_count": 25,
+      "mean_success_support_0_1": 0.0614528615,
+      "performance_weighted_support_0_1": 0.0589997931,
+      "positive_sign_rate_in_successes": 0.64,
+      "mean_raw_shap_success_log_odds": 0.0060587921,
+      "mean_raw_shap_failure_log_odds": -0.0182399386,
+      "success_minus_failure_raw_shap": 0.0242987306
+    },
+    {
+      "feature": "text_similarity_to_success",
+      "successful_post_count": 25,
+      "mean_success_support_0_1": 0.0587713734,
+      "performance_weighted_support_0_1": 0.0531330913,
+      "positive_sign_rate_in_successes": 0.76,
+      "mean_raw_shap_success_log_odds": 0.0114869597,
+      "mean_raw_shap_failure_log_odds": -0.0108255233,
+      "success_minus_failure_raw_shap": 0.022312483
+    },
+    {
+      "feature": "emoji_count",
+      "successful_post_count": 25,
+      "mean_success_support_0_1": 0.0584314588,
+      "performance_weighted_support_0_1": 0.049201001,
+      "positive_sign_rate_in_successes": 0.6,
+      "mean_raw_shap_success_log_odds": 0.009900661,
+      "mean_raw_shap_failure_log_odds": -0.0076986574,
+      "success_minus_failure_raw_shap": 0.0175993184
+    },
+    {
+      "feature": "word_count",
+      "successful_post_count": 25,
+      "mean_success_support_0_1": 0.0324506152,
+      "performance_weighted_support_0_1": 0.0323773599,
+      "positive_sign_rate_in_successes": 0.72,
+      "mean_raw_shap_success_log_odds": 0.0071780919,
+      "mean_raw_shap_failure_log_odds": -0.0009844652,
+      "success_minus_failure_raw_shap": 0.0081625571
+    },
+    {
+      "feature": "number_of_hashtags",
+      "successful_post_count": 25,
+      "mean_success_support_0_1": 0.0237505994,
+      "performance_weighted_support_0_1": 0.0291724325,
+      "positive_sign_rate_in_successes": 0.16,
+      "mean_raw_shap_success_log_odds": -0.0028529228,
+      "mean_raw_shap_failure_log_odds": 0.0062028406,
+      "success_minus_failure_raw_shap": -0.0090557635
+    },
+    {
+      "feature": "dominant_colors",
+      "successful_post_count": 25,
+      "mean_success_support_0_1": 0.0299404518,
+      "performance_weighted_support_0_1": 0.0284791052,
+      "positive_sign_rate_in_successes": 0.44,
+      "mean_raw_shap_success_log_odds": -0.0243020602,
+      "mean_raw_shap_failure_log_odds": 0.0233023804,
+      "success_minus_failure_raw_shap": -0.0476044407
+    },
+    {
+      "feature": "image_similarity_to_success",
+      "successful_post_count": 25,
+      "mean_success_support_0_1": 0.0255993796,
+      "performance_weighted_support_0_1": 0.0267899707,
+      "positive_sign_rate_in_successes": 0.56,
+      "mean_raw_shap_success_log_odds": -0.0008749245,
+      "mean_raw_shap_failure_log_odds": 0.0028996943,
+      "success_minus_failure_raw_shap": -0.0037746188
+    },
+    {
+      "feature": "product_category",
+      "successful_post_count": 25,
+      "mean_success_support_0_1": 0.0239537665,
+      "performance_weighted_support_0_1": 0.0245793422,
+      "positive_sign_rate_in_successes": 0.68,
+      "mean_raw_shap_success_log_odds": 0.0044122946,
+      "mean_raw_shap_failure_log_odds": -7.25043e-05,
+      "success_minus_failure_raw_shap": 0.0044847989
+    },
+    {
+      "feature": "caption_length",
+      "successful_post_count": 25,
+      "mean_success_support_0_1": 0.0222144446,
+      "performance_weighted_support_0_1": 0.0229063549,
+      "positive_sign_rate_in_successes": 0.56,
+      "mean_raw_shap_success_log_odds": 0.0031037727,
+      "mean_raw_shap_failure_log_odds": 0.0012306637,
+      "success_minus_failure_raw_shap": 0.001873109
+    },
+    {
+      "feature": "day",
+      "successful_post_count": 25,
+      "mean_success_support_0_1": 0.0172983099,
+      "performance_weighted_support_0_1": 0.0160256186,
+      "positive_sign_rate_in_successes": 0.64,
+      "mean_raw_shap_success_log_odds": 0.0019631991,
+      "mean_raw_shap_failure_log_odds": -0.0018294941,
+      "success_minus_failure_raw_shap": 0.0037926932
+    },
+    {
+      "feature": "layout_type",
+      "successful_post_count": 25,
+      "mean_success_support_0_1": 0.0141863922,
+      "performance_weighted_support_0_1": 0.0142200171,
+      "positive_sign_rate_in_successes": 0.68,
+      "mean_raw_shap_success_log_odds": 0.0008727494,
+      "mean_raw_shap_failure_log_odds": -0.0019164021,
+      "success_minus_failure_raw_shap": 0.0027891515
+    },
+    {
+      "feature": "cta_type",
+      "successful_post_count": 25,
+      "mean_success_support_0_1": 0.011545189,
+      "performance_weighted_support_0_1": 0.0119804048,
+      "positive_sign_rate_in_successes": 0.52,
+      "mean_raw_shap_success_log_odds": 0.0009719343,
+      "mean_raw_shap_failure_log_odds": -0.0006764614,
+      "success_minus_failure_raw_shap": 0.0016483957
+    },
+    {
+      "feature": "dialect",
+      "successful_post_count": 25,
+      "mean_success_support_0_1": 0.0117841926,
+      "performance_weighted_support_0_1": 0.0114478413,
+      "positive_sign_rate_in_successes": 0.92,
+      "mean_raw_shap_success_log_odds": 0.0026306148,
+      "mean_raw_shap_failure_log_odds": -0.0018453375,
+      "success_minus_failure_raw_shap": 0.0044759524
+    },
+    {
+      "feature": "visual_style",
+      "successful_post_count": 25,
+      "mean_success_support_0_1": 0.0089788336,
+      "performance_weighted_support_0_1": 0.0097360547,
+      "positive_sign_rate_in_successes": 0.4,
+      "mean_raw_shap_success_log_odds": -0.0010010037,
+      "mean_raw_shap_failure_log_odds": 0.0011615637,
+      "success_minus_failure_raw_shap": -0.0021625673
+    },
+    {
+      "feature": "campaign_goal",
+      "successful_post_count": 25,
+      "mean_success_support_0_1": 0.0077276537,
+      "performance_weighted_support_0_1": 0.0084904183,
+      "positive_sign_rate_in_successes": 0.52,
+      "mean_raw_shap_success_log_odds": 0.0008675201,
+      "mean_raw_shap_failure_log_odds": 0.0023322893,
+      "success_minus_failure_raw_shap": -0.0014647691
+    },
+    {
+      "feature": "time_bucket",
+      "successful_post_count": 25,
+      "mean_success_support_0_1": 0.0073231566,
+      "performance_weighted_support_0_1": 0.0072105036,
+      "positive_sign_rate_in_successes": 0.36,
+      "mean_raw_shap_success_log_odds": -0.0004644937,
+      "mean_raw_shap_failure_log_odds": 0.0032141909,
+      "success_minus_failure_raw_shap": -0.0036786846
+    },
+    {
+      "feature": "campaign_type",
+      "successful_post_count": 25,
+      "mean_success_support_0_1": 0.0055031171,
+      "performance_weighted_support_0_1": 0.0059770609,
+      "positive_sign_rate_in_successes": 0.6,
+      "mean_raw_shap_success_log_odds": -0.0014361084,
+      "mean_raw_shap_failure_log_odds": -0.0006836016,
+      "success_minus_failure_raw_shap": -0.0007525067
+    },
+    {
+      "feature": "number_of_products",
+      "successful_post_count": 25,
+      "mean_success_support_0_1": 0.0027877959,
+      "performance_weighted_support_0_1": 0.0042908184,
+      "positive_sign_rate_in_successes": 0.04,
+      "mean_raw_shap_success_log_odds": 3.42664e-05,
+      "mean_raw_shap_failure_log_odds": 0.0048490213,
+      "success_minus_failure_raw_shap": -0.0048147549
+    },
+    {
+      "feature": "contains_human",
+      "successful_post_count": 25,
+      "mean_success_support_0_1": 0.0044862891,
+      "performance_weighted_support_0_1": 0.0042542025,
+      "positive_sign_rate_in_successes": 0.24,
+      "mean_raw_shap_success_log_odds": -0.0038062068,
+      "mean_raw_shap_failure_log_odds": 0.0020155995,
+      "success_minus_failure_raw_shap": -0.0058218063
+    },
+    {
+      "feature": "number_of_ctas",
+      "successful_post_count": 25,
+      "mean_success_support_0_1": 0.0042426029,
+      "performance_weighted_support_0_1": 0.0036623586,
+      "positive_sign_rate_in_successes": 0.56,
+      "mean_raw_shap_success_log_odds": -0.0005035267,
+      "mean_raw_shap_failure_log_odds": 0.0004442941,
+      "success_minus_failure_raw_shap": -0.0009478208
+    },
+    {
+      "feature": "cta_presence",
+      "successful_post_count": 25,
+      "mean_success_support_0_1": 0.0028637114,
+      "performance_weighted_support_0_1": 0.0026142191,
+      "positive_sign_rate_in_successes": 0.28,
+      "mean_raw_shap_success_log_odds": -0.0010634146,
+      "mean_raw_shap_failure_log_odds": 0.002793129,
+      "success_minus_failure_raw_shap": -0.0038565436
+    },
+    {
+      "feature": "brand_name",
+      "successful_post_count": 25,
+      "mean_success_support_0_1": 0.0004662305,
+      "performance_weighted_support_0_1": 0.0004170064,
+      "positive_sign_rate_in_successes": 0.48,
+      "mean_raw_shap_success_log_odds": -0.000758028,
+      "mean_raw_shap_failure_log_odds": 0.0020504465,
+      "success_minus_failure_raw_shap": -0.0028084745
+    },
+    {
+      "feature": "logo_position",
+      "successful_post_count": 25,
+      "mean_success_support_0_1": 0.0003958512,
+      "performance_weighted_support_0_1": 0.0003589511,
+      "positive_sign_rate_in_successes": 0.8,
+      "mean_raw_shap_success_log_odds": 0.0001232579,
+      "mean_raw_shap_failure_log_odds": 0.0001734112,
+      "success_minus_failure_raw_shap": -5.01533e-05
+    },
+    {
+      "feature": "is_product_post",
+      "successful_post_count": 25,
+      "mean_success_support_0_1": 8.10058e-05,
+      "performance_weighted_support_0_1": 7.78806e-05,
+      "positive_sign_rate_in_successes": 0.16,
+      "mean_raw_shap_success_log_odds": -0.0002886373,
+      "mean_raw_shap_failure_log_odds": 0.0002286868,
+      "success_minus_failure_raw_shap": -0.0005173241
+    },
+    {
+      "feature": "season",
+      "successful_post_count": 25,
+      "mean_success_support_0_1": 0.0,
+      "performance_weighted_support_0_1": 0.0,
+      "positive_sign_rate_in_successes": 0.0,
+      "mean_raw_shap_success_log_odds": 0.0,
+      "mean_raw_shap_failure_log_odds": 0.0,
+      "success_minus_failure_raw_shap": 0.0
+    },
+    {
+      "feature": "language",
+      "successful_post_count": 25,
+      "mean_success_support_0_1": 0.0,
+      "performance_weighted_support_0_1": 0.0,
+      "positive_sign_rate_in_successes": 0.0,
+      "mean_raw_shap_success_log_odds": 0.0,
+      "mean_raw_shap_failure_log_odds": 0.0,
+      "success_minus_failure_raw_shap": 0.0
+    },
+    {
+      "feature": "image_count",
+      "successful_post_count": 25,
+      "mean_success_support_0_1": 0.0,
+      "performance_weighted_support_0_1": 0.0,
+      "positive_sign_rate_in_successes": 0.0,
+      "mean_raw_shap_success_log_odds": 0.0,
+      "mean_raw_shap_failure_log_odds": 0.0,
+      "success_minus_failure_raw_shap": 0.0
+    }
+  ],
+  "repeated_feature_value_scores": [
+    {
+      "feature": "tone",
+      "value": "Playful, Urgent, Promotional",
+      "support_count": 2,
+      "mean_success_support_0_1": 0.3108020861
+    },
+    {
+      "feature": "tone",
+      "value": "Promotional, Urgent",
+      "support_count": 2,
+      "mean_success_support_0_1": 0.2406427503
+    },
+    {
+      "feature": "content_pillar",
+      "value": "Offers & Giveaways",
+      "support_count": 4,
+      "mean_success_support_0_1": 0.2367567465
+    },
+    {
+      "feature": "content_pillar",
+      "value": "Charging / Utility Features",
+      "support_count": 2,
+      "mean_success_support_0_1": 0.2356233276
+    },
+    {
+      "feature": "tone",
+      "value": "Playful, Promotional, Urgent",
+      "support_count": 4,
+      "mean_success_support_0_1": 0.2280887055
+    },
+    {
+      "feature": "content_pillar",
+      "value": "New Arrivals & Giveaways",
+      "support_count": 2,
+      "mean_success_support_0_1": 0.2094078282
+    },
+    {
+      "feature": "content_pillar",
+      "value": "Value Mobile & Giveaways",
+      "support_count": 2,
+      "mean_success_support_0_1": 0.1681939943
+    },
+    {
+      "feature": "content_pillar",
+      "value": "Limited-Time Offers & Giveaways",
+      "support_count": 2,
+      "mean_success_support_0_1": 0.1580457999
+    },
+    {
+      "feature": "emoji_count",
+      "value": 10.0,
+      "support_count": 3,
+      "mean_success_support_0_1": 0.1536554541
+    },
+    {
+      "feature": "tone",
+      "value": "Playful, Promotional",
+      "support_count": 5,
+      "mean_success_support_0_1": 0.1288501989
+    },
+    {
+      "feature": "emoji_count",
+      "value": 11.0,
+      "support_count": 3,
+      "mean_success_support_0_1": 0.1138238729
+    },
+    {
+      "feature": "emoji_count",
+      "value": 7.0,
+      "support_count": 4,
+      "mean_success_support_0_1": 0.0845088709
+    },
+    {
+      "feature": "emoji_count",
+      "value": 9.0,
+      "support_count": 2,
+      "mean_success_support_0_1": 0.0768984276
+    },
+    {
+      "feature": "day",
+      "value": "السبت",
+      "support_count": 5,
+      "mean_success_support_0_1": 0.0584382464
+    },
+    {
+      "feature": "product_category",
+      "value": "Mobile",
+      "support_count": 17,
+      "mean_success_support_0_1": 0.0352261272
+    },
+    {
+      "feature": "layout_type",
+      "value": "Product with prize cards",
+      "support_count": 7,
+      "mean_success_support_0_1": 0.0258901649
+    },
+    {
+      "feature": "cta_type",
+      "value": "Enter giveaway",
+      "support_count": 3,
+      "mean_success_support_0_1": 0.0254792976
+    },
+    {
+      "feature": "number_of_ctas",
+      "value": 0.0,
+      "support_count": 2,
+      "mean_success_support_0_1": 0.0249255339
+    },
+    {
+      "feature": "word_count",
+      "value": 62.0,
+      "support_count": 3,
+      "mean_success_support_0_1": 0.0233327385
+    },
+    {
+      "feature": "visual_style",
+      "value": "Product offer composite",
+      "support_count": 10,
+      "mean_success_support_0_1": 0.0224470841
+    },
+    {
+      "feature": "cta_type",
+      "value": "Unknown",
+      "support_count": 3,
+      "mean_success_support_0_1": 0.0221542702
+    },
+    {
+      "feature": "emoji_count",
+      "value": 6.0,
+      "support_count": 2,
+      "mean_success_support_0_1": 0.0215242146
+    },
+    {
+      "feature": "cta_type",
+      "value": "Comment keyword",
+      "support_count": 7,
+      "mean_success_support_0_1": 0.0208184317
+    },
+    {
+      "feature": "number_of_hashtags",
+      "value": 3.0,
+      "support_count": 2,
+      "mean_success_support_0_1": 0.0184833243
+    },
+    {
+      "feature": "layout_type",
+      "value": "Human with product and offer bar",
+      "support_count": 10,
+      "mean_success_support_0_1": 0.0173428651
+    },
+    {
+      "feature": "campaign_goal",
+      "value": "Lead Generation",
+      "support_count": 11,
+      "mean_success_support_0_1": 0.0167624094
+    },
+    {
+      "feature": "campaign_type",
+      "value": "Limited-Time Offer + Giveaway",
+      "support_count": 3,
+      "mean_success_support_0_1": 0.0165039777
+    },
+    {
+      "feature": "dialect",
+      "value": "Syrian Arabic with MSA/English product terms",
+      "support_count": 23,
+      "mean_success_support_0_1": 0.012808905
+    },
+    {
+      "feature": "day",
+      "value": "الثلاثاء",
+      "support_count": 5,
+      "mean_success_support_0_1": 0.0126454116
+    },
+    {
+      "feature": "time_bucket",
+      "value": "Morning",
+      "support_count": 14,
+      "mean_success_support_0_1": 0.0115864663
+    },
+    {
+      "feature": "day",
+      "value": "الأحد",
+      "support_count": 5,
+      "mean_success_support_0_1": 0.009618691
+    },
+    {
+      "feature": "cta_presence",
+      "value": "Implicit",
+      "support_count": 5,
+      "mean_success_support_0_1": 0.0092503728
+    },
+    {
+      "feature": "word_count",
+      "value": 59.0,
+      "support_count": 4,
+      "mean_success_support_0_1": 0.0076839196
+    },
+    {
+      "feature": "day",
+      "value": "الاثنين",
+      "support_count": 4,
+      "mean_success_support_0_1": 0.0072365005
+    },
+    {
+      "feature": "contains_human",
+      "value": "No",
+      "support_count": 14,
+      "mean_success_support_0_1": 0.006573713
+    },
+    {
+      "feature": "campaign_type",
+      "value": "Product Launch + Giveaway",
+      "support_count": 2,
+      "mean_success_support_0_1": 0.006347994
+    },
+    {
+      "feature": "campaign_type",
+      "value": "Giveaway Promotion",
+      "support_count": 4,
+      "mean_success_support_0_1": 0.0062025824
+    },
+    {
+      "feature": "time_bucket",
+      "value": "Late Night",
+      "support_count": 4,
+      "mean_success_support_0_1": 0.0052170966
+    },
+    {
+      "feature": "campaign_type",
+      "value": "Product Promotion",
+      "support_count": 3,
+      "mean_success_support_0_1": 0.0050607208
+    },
+    {
+      "feature": "cta_presence",
+      "value": "Unknown",
+      "support_count": 2,
+      "mean_success_support_0_1": 0.0049714189
+    },
+    {
+      "feature": "number_of_ctas",
+      "value": 1.0,
+      "support_count": 15,
+      "mean_success_support_0_1": 0.003569725
+    },
+    {
+      "feature": "contains_human",
+      "value": "Yes",
+      "support_count": 11,
+      "mean_success_support_0_1": 0.0018295677
+    },
+    {
+      "feature": "caption_length",
+      "value": 304.0,
+      "support_count": 2,
+      "mean_success_support_0_1": 0.0014509219
+    },
+    {
+      "feature": "campaign_goal",
+      "value": "Sales Conversion",
+      "support_count": 11,
+      "mean_success_support_0_1": 0.00080044
+    },
+    {
+      "feature": "cta_presence",
+      "value": "Explicit",
+      "support_count": 17,
+      "mean_success_support_0_1": 0.0006950392
+    },
+    {
+      "feature": "brand_name",
+      "value": "Samsung",
+      "support_count": 22,
+      "mean_success_support_0_1": 0.0005298074
+    },
+    {
+      "feature": "number_of_ctas",
+      "value": 2.0,
+      "support_count": 6,
+      "mean_success_support_0_1": 0.0004446882
+    },
+    {
+      "feature": "logo_position",
+      "value": "Samsung: top-left; Al Boraq: top-right",
+      "support_count": 25,
+      "mean_success_support_0_1": 0.0003958512
+    },
+    {
+      "feature": "number_of_hashtags",
+      "value": 0.0,
+      "support_count": 20,
+      "mean_success_support_0_1": 0.0002139549
+    },
+    {
+      "feature": "is_product_post",
+      "value": "Yes",
+      "support_count": 24,
+      "mean_success_support_0_1": 8.43811e-05
+    },
+    {
+      "feature": "season",
+      "value": "الصيف",
+      "support_count": 25,
+      "mean_success_support_0_1": 0.0
+    },
+    {
+      "feature": "language",
+      "value": "Arabic",
+      "support_count": 25,
+      "mean_success_support_0_1": 0.0
+    },
+    {
+      "feature": "image_count",
+      "value": 1.0,
+      "support_count": 25,
+      "mean_success_support_0_1": 0.0
+    },
+    {
+      "feature": "number_of_products",
+      "value": 1.0,
+      "support_count": 24,
+      "mean_success_support_0_1": 0.0
+    },
+    {
+      "feature": "cta_type",
+      "value": "Buy",
+      "support_count": 11,
+      "mean_success_support_0_1": 0.0
+    },
+    {
+      "feature": "visual_style",
+      "value": "Lifestyle infographic",
+      "support_count": 11,
+      "mean_success_support_0_1": 0.0
+    },
+    {
+      "feature": "layout_type",
+      "value": "Centered product with headline",
+      "support_count": 8,
+      "mean_success_support_0_1": 0.0
+    },
+    {
+      "feature": "campaign_type",
+      "value": "Product Promotion + Giveaway",
+      "support_count": 7,
+      "mean_success_support_0_1": 0.0
+    },
+    {
+      "feature": "time_bucket",
+      "value": "Afternoon",
+      "support_count": 5,
+      "mean_success_support_0_1": 0.0
+    },
+    {
+      "feature": "emoji_count",
+      "value": 4.0,
+      "support_count": 5,
+      "mean_success_support_0_1": 0.0
+    },
+    {
+      "feature": "visual_style",
+      "value": "Product hero poster",
+      "support_count": 4,
+      "mean_success_support_0_1": 0.0
+    },
+    {
+      "feature": "emoji_count",
+      "value": 5.0,
+      "support_count": 4,
+      "mean_success_support_0_1": 0.0
+    },
+    {
+      "feature": "day",
+      "value": "الأربعاء",
+      "support_count": 3,
+      "mean_success_support_0_1": 0.0
+    },
+    {
+      "feature": "product_category",
+      "value": "Portable Charger",
+      "support_count": 2,
+      "mean_success_support_0_1": 0.0
+    },
+    {
+      "feature": "brand_name",
+      "value": "BMS",
+      "support_count": 2,
+      "mean_success_support_0_1": 0.0
+    },
+    {
+      "feature": "time_bucket",
+      "value": "Evening",
+      "support_count": 2,
+      "mean_success_support_0_1": 0.0
+    },
+    {
+      "feature": "word_count",
+      "value": 48.0,
+      "support_count": 2,
+      "mean_success_support_0_1": 0.0
+    },
+    {
+      "feature": "word_count",
+      "value": 54.0,
+      "support_count": 2,
+      "mean_success_support_0_1": 0.0
+    },
+    {
+      "feature": "dialect",
+      "value": "Modern Standard Arabic",
+      "support_count": 2,
+      "mean_success_support_0_1": 0.0
+    },
+    {
+      "feature": "number_of_ctas",
+      "value": 3.0,
+      "support_count": 2,
+      "mean_success_support_0_1": 0.0
+    },
+    {
+      "feature": "day",
+      "value": "الخميس",
+      "support_count": 2,
+      "mean_success_support_0_1": 0.0
+    },
+    {
+      "feature": "product_category",
+      "value": "Foldable Mobile",
+      "support_count": 2,
+      "mean_success_support_0_1": 0.0
+    }
+  ]
+}

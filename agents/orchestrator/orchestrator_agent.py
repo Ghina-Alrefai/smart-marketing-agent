@@ -293,7 +293,8 @@ def _brand_guidelines(session, brand_id, dry_run):
 
 
 def _wad_via_idea(guidelines: dict, product_analysis: dict, pid: int,
-                  skip_image: bool, dry_run: bool) -> dict:
+                  skip_image: bool, dry_run: bool, brand_id: int,
+                  include_design: bool = True) -> dict:
     """
     WRITE_AND_DESIGN عبر آلية الحملة الموحّدة (اقتراح E):
     فكرة قانونية واحدة (post_count=1) تُمرَّر لكاتب المحتوى والمصمّم معاً،
@@ -306,13 +307,12 @@ def _wad_via_idea(guidelines: dict, product_analysis: dict, pid: int,
                 "hashtags": ["#تجريبي"], "idea": idea,
                 "design": {"image_url": "(stub).png", "design_prompt": "(stub) prompt",
                            "visual_concept": idea["visual_direction"]},
-                "review": {"approved": True, "notes": "(stub)"}}
+                "review": {"approved": None, "notes": "(stub) requires human approval"},
+                "intelligence": {"scoring_mode": "dry_run", "human_approval_required": True}}
 
     from workflows.campaign_pipeline import _build_brand_guide
     from agents.idea.idea_agent import generate_post_ideas
-    from agents.content.content_agent import write_content_for_idea
-    from agents.design.design_agent import design_for_idea
-    from agents.review.review_agent import review_post
+    from services.campaign_intelligence import generate_evaluated_post
 
     brand_guide = _build_brand_guide(guidelines)
     prod = get_product(pid) or {}
@@ -329,15 +329,20 @@ def _wad_via_idea(guidelines: dict, product_analysis: dict, pid: int,
     ideas = generate_post_ideas(strategy, [product_ctx], brand_guide, [], post_count=1)
     idea_post = (ideas.get("posts") or [{}])[0]
 
-    content = write_content_for_idea(idea_post, product_ctx, brand_guide)
-    design = design_for_idea(idea_post, content, product_ctx, brand_guide)
-
-    review = review_post(
-        brand_guidelines=json.dumps(guidelines, ensure_ascii=False),
-        hook=content.get("hook", ""), caption=content.get("caption", ""),
-        cta=content.get("cta", ""),
-        hashtags=json.dumps(content.get("hashtags", []), ensure_ascii=False),
-        image_prompt=design.get("design_prompt", ""))
+    evaluated = generate_evaluated_post(
+        index=1,
+        idea_post=idea_post,
+        product=product_ctx,
+        brand_guide=brand_guide,
+        brand_id=brand_id,
+        campaign_goals=["زيادة المبيعات"],
+        start_date=None,
+        dry_run=False,
+        include_design=include_design,
+    )
+    content = evaluated["content"]
+    design = evaluated["design"]
+    review = evaluated["review"]
 
     return {
         "hook": content.get("hook", ""), "caption": content.get("caption", ""),
@@ -346,6 +351,7 @@ def _wad_via_idea(guidelines: dict, product_analysis: dict, pid: int,
         # نضيف image_url (اسم يفهمه الشات) بجانب image من مخرَج design_for_idea
         "design": {**design, "image_url": design.get("image", "")},
         "review": review,
+        "intelligence": evaluated["intelligence"],
     }
 
 
@@ -400,7 +406,8 @@ def _execute(session, user_id, brand_id, dry_run) -> dict:
     # WRITE_AND_DESIGN → عبر آلية الحملة نفسها (فكرة قانونية واحدة تضمن اتساق النص والصورة)
     if intent == "WRITE_AND_DESIGN":
         out = _wad_via_idea(guidelines, product_analysis, pid,
-                            bool(slots.get("skip_image")), dry_run)
+                            bool(slots.get("skip_image")), dry_run, brand_id,
+                            include_design=True)
         session.cache["last_post"] = {
             "hook": out.get("hook", ""), "caption": out.get("caption", ""),
             "cta": out.get("cta", ""), "hashtags": out.get("hashtags", []),
@@ -412,24 +419,14 @@ def _execute(session, user_id, brand_id, dry_run) -> dict:
         if dry_run:
             content = {"hook": "(stub) خطّاف", "caption": "(stub) نص المنشور",
                        "cta": "اطلب الآن", "hashtags": ["#تجريبي"]}
+            out.update(content)
+            out["review"] = {"approved": None, "notes": "(stub) requires human approval"}
+            out["intelligence"] = {"scoring_mode": "dry_run", "human_approval_required": True}
         else:
-            from agents.content.content_agent import write_post_content
-            content = write_post_content(
-                brand_guidelines=g_json, product_analysis=pa_json,
-                post_type=slots.get("post_type", "promotional"), goal="", content_angle="",
-                must_use_words=", ".join(brand_info.get("must_use_words", [])),
-                forbidden_words=", ".join(brand_info.get("forbidden_words", [])),
-                preferred_cta=brand_info.get("preferred_cta", ""))
-        out.update(content)
-
-        if dry_run:
-            out["review"] = {"approved": True, "notes": "(stub)"}
-        else:
-            from agents.review.review_agent import review_post
-            out["review"] = review_post(
-                brand_guidelines=g_json, hook=out.get("hook", ""), caption=out.get("caption", ""),
-                cta=out.get("cta", ""), hashtags=json.dumps(out.get("hashtags", []), ensure_ascii=False),
-                image_prompt="")
+            out = _wad_via_idea(
+                guidelines, product_analysis, pid, True, False, brand_id,
+                include_design=False,
+            )
 
     if intent == "CREATE_DESIGN":
         product = get_product(pid) if pid else {}

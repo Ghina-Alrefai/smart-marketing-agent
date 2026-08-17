@@ -63,6 +63,31 @@ def update_plan_status(plan_id: int, status: str) -> bool:
         if not plan: return False
         plan.status = status; db.commit(); return True
 
+
+def update_plan_generation_state(
+    plan_id: int,
+    *,
+    status: str | None = None,
+    current_stage: str | None = None,
+    error_message: str | None = None,
+    clear_error: bool = False,
+) -> bool:
+    """Persist observable state for a campaign running outside the request lifecycle."""
+    with _db() as db:
+        plan = db.query(ContentPlan).filter(ContentPlan.id == plan_id).first()
+        if not plan:
+            return False
+        if status is not None:
+            plan.status = status
+        if current_stage is not None:
+            plan.current_stage = current_stage
+        if clear_error:
+            plan.error_message = None
+        elif error_message is not None:
+            plan.error_message = error_message[:4000]
+        db.commit()
+        return True
+
 def save_generated_post(content_plan_id, product_id, day_number, post_type, post_goal,
                         hook, caption, cta, hashtags, image_prompt,
                         image_url="", review_notes="", approved=False) -> int:
@@ -83,9 +108,10 @@ def save_campaign_post(content_plan_id, product_id, post_id, idea, design,
                        day_number, post_type, post_goal,
                        hook, caption, cta, hashtags,
                        image_prompt="", image_url="", review_notes=None,
-                       approved=False) -> int:
+                       approved=False, intelligence=None) -> int:
     """يحفظ بوست حملة مع الحقول المهيكلة (post_id + idea + design)."""
     with _db() as db:
+        intelligence = intelligence or {}
         post = GeneratedPost(
             content_plan_id=content_plan_id, product_id=product_id,
             post_id=post_id, idea=idea or {}, design=design or {},
@@ -94,12 +120,23 @@ def save_campaign_post(content_plan_id, product_id, post_id, idea, design,
             image_prompt=image_prompt, image_url=image_url,
             review_notes=review_notes, approved=approved,
             status="approved" if approved else "reviewing",
+            candidate_results=intelligence.get("candidate_results") or [],
+            selected_candidate=intelligence.get("selected_candidate") or {},
+            predesign_score=intelligence.get("predesign_score"),
+            multimodal_score=intelligence.get("multimodal_score"),
+            intelligence_status=intelligence.get("intelligence_status", "not_evaluated"),
+            evaluation=intelligence.get("evaluation") or {},
+            dna_profile_version=intelligence.get("dna_profile_version"),
+            dna_model_version=intelligence.get("dna_model_version"),
+            memory_policy_ids=intelligence.get("memory_policy_ids") or [],
+            generation_trace_id=intelligence.get("generation_trace_id"),
         )
         db.add(post); db.commit(); db.refresh(post)
         return post.id
 
 
-def save_plan_campaign_data(plan_id, strategy=None, campaign_data=None) -> bool:
+def save_plan_campaign_data(plan_id, strategy=None, campaign_data=None,
+                            intelligence_summary=None) -> bool:
     """يخزّن مخرَج الاستراتيجية وكائن الحملة الموحّد على الخطة."""
     with _db() as db:
         plan = db.query(ContentPlan).filter(ContentPlan.id == plan_id).first()
@@ -109,6 +146,8 @@ def save_plan_campaign_data(plan_id, strategy=None, campaign_data=None) -> bool:
             plan.strategy = strategy
         if campaign_data is not None:
             plan.campaign_data = campaign_data
+        if intelligence_summary is not None:
+            plan.intelligence_summary = intelligence_summary
         db.commit(); return True
 
 

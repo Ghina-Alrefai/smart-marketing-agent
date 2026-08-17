@@ -77,6 +77,14 @@ export default function CampaignsPage() {
                 <div>
                   <p className="font-semibold text-gray-900">{plan.campaign_name || `حملة #${plan.id}`}</p>
                   <p className="text-sm text-gray-400 mt-0.5">{plan.days} أيام</p>
+                  {plan.status === 'generating' && plan.current_stage && (
+                    <p className="text-xs text-blue-600 mt-1">{plan.current_stage}</p>
+                  )}
+                  {plan.status === 'failed' && plan.error_message && (
+                    <p className="text-xs text-red-600 mt-1.5 max-w-2xl leading-5" title={plan.error_message}>
+                      {plan.error_message}
+                    </p>
+                  )}
                 </div>
                 <div className="flex items-center gap-3">
                   <span className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${statusInfo.color}`}>

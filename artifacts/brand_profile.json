@@ -1,0 +1,74 @@
+{
+  "schema_version": "2.0",
+  "profile_type": "stable_brand_identity",
+  "page_id": "al_boraq",
+  "page_name": "Al Boraq Telecom‎‏",
+  "language": [
+    "Arabic"
+  ],
+  "dialects": [
+    "Syrian Arabic with MSA/English product terms",
+    "Arabic (MSA with technical English)",
+    "Modern Standard Arabic"
+  ],
+  "caption_profile": {
+    "median_word_count": 59.0,
+    "median_caption_length": 305.0,
+    "median_emoji_count": 6.0,
+    "common_tones": [
+      "promotional",
+      "playful",
+      "urgent",
+      "informative",
+      "premium"
+    ],
+    "common_hook_families": [
+      "benefit_value",
+      "giveaway_prize",
+      "question",
+      "announcement_arrival",
+      "urgency_scarcity"
+    ],
+    "common_writing_style_families": [
+      "feature_list",
+      "comment_cta",
+      "direct_cta",
+      "educational"
+    ],
+    "common_cta_types": [
+      "Buy",
+      "Comment keyword",
+      "Learn More",
+      "Enter giveaway"
+    ]
+  },
+  "visual_profile": {
+    "common_visual_styles": [
+      "Lifestyle infographic",
+      "Product offer composite",
+      "Product hero poster"
+    ],
+    "common_layouts": [
+      "Centered product with headline",
+      "Human with product and offer bar",
+      "Product with prize cards"
+    ],
+    "common_logo_positions": [
+      "Samsung: top-left; Al Boraq: top-right",
+      "Not clearly visible"
+    ],
+    "common_color_families": [
+      "gray",
+      "cyan",
+      "blue",
+      "white",
+      "black",
+      "teal",
+      "orange",
+      "yellow"
+    ],
+    "human_presence_rate": 0.44
+  },
+  "separation_rule": "This profile contains stable identity statistics only. Performance-derived evidence and policies belong to Adaptive Memory.",
+  "brand_profile_version": "sha256:8d6d6c4db8e6deb4"
+}

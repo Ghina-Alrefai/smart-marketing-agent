@@ -1,0 +1,34 @@
+{
+  "database": "/tmp/demo_summary_build.db",
+  "historical_input": "/mnt/data/brand-dna-adaptive-memory-v1.0.0/outputs/adaptive_memory/all_oof_attributions.jsonl",
+  "ingestion": {
+    "record_count": 50,
+    "extracted_count": 1550,
+    "inserted_count": 1550,
+    "duplicate_count": 0,
+    "skipped_count": 0
+  },
+  "consolidation": {
+    "brand_id": "al-boraq",
+    "evidence_count": 1550,
+    "candidate_insight_count": 55,
+    "validated_insight_count": 15,
+    "rejected_insight_count": 40
+  },
+  "draft_policy_count": 4,
+  "draft_policy_ids": [
+    "cd960c11-02e9-46b9-a324-30b9756907ce",
+    "6eacbba1-e481-4bc8-ba9a-a484307628e4",
+    "748b6d23-9ac0-4810-8ce7-4e329c5b8976",
+    "3ee498b7-d1ba-477d-8480-48e3edd4501d"
+  ],
+  "activated_policy_count": 0,
+  "activated_policy_ids": [],
+  "stats": {
+    "evidence_events": 1550,
+    "insights": 55,
+    "policies": 4,
+    "active_policies": 0
+  },
+  "note": "Policies remain drafts until the explicit activate command is run."
+}

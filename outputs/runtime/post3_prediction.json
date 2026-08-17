@@ -1,0 +1,754 @@
+{
+  "schema_version": "1.0",
+  "post_id": "3",
+  "model_version": "brand-dna-1.1.0-multimodal",
+  "brand_profile_version": "sha256:8d6d6c4db8e6deb4",
+  "mode": "multimodal",
+  "predicted_success_probability": 0.6341782407,
+  "predicted_class_at_0_5": 1,
+  "baseline_probability": 0.4991015689,
+  "shap_units": "log_odds",
+  "shap_additivity_residual": 0.0,
+  "model_quality": {
+    "accuracy": 0.56,
+    "f1": 0.5769230769230769,
+    "precision": 0.5555555555555556,
+    "recall": 0.6,
+    "roc_auc": 0.6768000000000001,
+    "brier_score": 0.22339017373022854,
+    "log_loss": 0.637604287625267,
+    "fold_metric_mean": {
+      "accuracy": 0.5599999999999999,
+      "f1": 0.5721678321678321,
+      "precision": 0.5733333333333334,
+      "recall": 0.6,
+      "roc_auc": 0.704,
+      "brier_score": 0.22339017373022857,
+      "log_loss": 0.6376042876252669
+    },
+    "fold_metric_std": {
+      "accuracy": 0.13564659966250536,
+      "f1": 0.1336702997459892,
+      "precision": 0.1420485050177501,
+      "recall": 0.1788854381999832,
+      "roc_auc": 0.18347751905887547,
+      "brier_score": 0.02993278595376595,
+      "log_loss": 0.061562090284698036
+    },
+    "probability_min": 0.23680755885843172,
+    "probability_max": 0.6870768198584607
+  },
+  "human_approval_required": true,
+  "warnings": [
+    "This is a model estimate, not a guarantee of Facebook performance.",
+    "SHAP explains the trained model; it does not prove causality."
+  ],
+  "feature_attributions": [
+    {
+      "feature": "campaign_goal",
+      "value": "Sales Conversion",
+      "direction": "opposes_success",
+      "raw_shap_log_odds": -0.0071396985,
+      "success_support_0_1": 0.0,
+      "success_opposition_0_1": 0.0485912851,
+      "importance_0_1": 0.0083710751,
+      "owner_agent": "CAMPAIGN_AGENT",
+      "feature_role": "context"
+    },
+    {
+      "feature": "campaign_type",
+      "value": "Product Launch + Giveaway",
+      "direction": "supports_success",
+      "raw_shap_log_odds": 0.0112822934,
+      "success_support_0_1": 0.0161012012,
+      "success_opposition_0_1": 0.0,
+      "importance_0_1": 0.0139911189,
+      "owner_agent": "CAMPAIGN_AGENT",
+      "feature_role": "controllable"
+    },
+    {
+      "feature": "product_category",
+      "value": "Mobile",
+      "direction": "supports_success",
+      "raw_shap_log_odds": 0.0127271476,
+      "success_support_0_1": 0.0181631834,
+      "success_opposition_0_1": 0.0,
+      "importance_0_1": 0.0130876808,
+      "owner_agent": "CAMPAIGN_AGENT",
+      "feature_role": "context"
+    },
+    {
+      "feature": "brand_name",
+      "value": "Samsung",
+      "direction": "opposes_success",
+      "raw_shap_log_odds": -0.0005065575,
+      "success_support_0_1": 0.0,
+      "success_opposition_0_1": 0.0034475237,
+      "importance_0_1": 0.0004681911,
+      "owner_agent": "CAMPAIGN_AGENT",
+      "feature_role": "context"
+    },
+    {
+      "feature": "day",
+      "value": "الأربعاء",
+      "direction": "opposes_success",
+      "raw_shap_log_odds": -0.0078004091,
+      "success_support_0_1": 0.0,
+      "success_opposition_0_1": 0.0530879422,
+      "importance_0_1": 0.0156504226,
+      "owner_agent": "SCHEDULER_AGENT",
+      "feature_role": "controllable"
+    },
+    {
+      "feature": "time_bucket",
+      "value": "Late Night",
+      "direction": "supports_success",
+      "raw_shap_log_odds": 0.0028415429,
+      "success_support_0_1": 0.0040552264,
+      "success_opposition_0_1": 0.0,
+      "importance_0_1": 0.0069008941,
+      "owner_agent": "SCHEDULER_AGENT",
+      "feature_role": "controllable"
+    },
+    {
+      "feature": "season",
+      "value": "الصيف",
+      "direction": "neutral",
+      "raw_shap_log_odds": 0.0,
+      "success_support_0_1": 0.0,
+      "success_opposition_0_1": -0.0,
+      "importance_0_1": 0.0,
+      "owner_agent": "CAMPAIGN_AGENT",
+      "feature_role": "context"
+    },
+    {
+      "feature": "language",
+      "value": "Arabic",
+      "direction": "neutral",
+      "raw_shap_log_odds": 0.0,
+      "success_support_0_1": 0.0,
+      "success_opposition_0_1": -0.0,
+      "importance_0_1": 0.0,
+      "owner_agent": "COPYWRITER_AGENT",
+      "feature_role": "brand_constraint"
+    },
+    {
+      "feature": "dialect",
+      "value": "Syrian Arabic with MSA/English product terms",
+      "direction": "supports_success",
+      "raw_shap_log_odds": 0.0044465932,
+      "success_support_0_1": 0.0063458278,
+      "success_opposition_0_1": 0.0,
+      "importance_0_1": 0.0045607535,
+      "owner_agent": "COPYWRITER_AGENT",
+      "feature_role": "brand_constraint"
+    },
+    {
+      "feature": "cta_presence",
+      "value": "Implicit",
+      "direction": "supports_success",
+      "raw_shap_log_odds": 0.0078714571,
+      "success_support_0_1": 0.011233524,
+      "success_opposition_0_1": 0.0,
+      "importance_0_1": 0.0074870021,
+      "owner_agent": "COPYWRITER_AGENT",
+      "feature_role": "controllable"
+    },
+    {
+      "feature": "cta_type",
+      "value": "Buy",
+      "direction": "opposes_success",
+      "raw_shap_log_odds": -0.0072766336,
+      "success_support_0_1": 0.0,
+      "success_opposition_0_1": 0.0495232363,
+      "importance_0_1": 0.0100374296,
+      "owner_agent": "COPYWRITER_AGENT",
+      "feature_role": "controllable"
+    },
+    {
+      "feature": "tone",
+      "value": "Playful, Promotional, Urgent",
+      "direction": "supports_success",
+      "raw_shap_log_odds": 0.1211740306,
+      "success_support_0_1": 0.1729300396,
+      "success_opposition_0_1": 0.0,
+      "importance_0_1": 0.1295988847,
+      "owner_agent": "COPYWRITER_AGENT",
+      "feature_role": "controllable"
+    },
+    {
+      "feature": "hook_style",
+      "value": "Question + product reveal",
+      "direction": "supports_success",
+      "raw_shap_log_odds": 0.1227353237,
+      "success_support_0_1": 0.1751581941,
+      "success_opposition_0_1": 0.0,
+      "importance_0_1": 0.1220319157,
+      "owner_agent": "COPYWRITER_AGENT",
+      "feature_role": "controllable"
+    },
+    {
+      "feature": "writing_style",
+      "value": "Question hook; Product reveal; Giveaway",
+      "direction": "opposes_success",
+      "raw_shap_log_odds": -0.0447732207,
+      "success_support_0_1": 0.0,
+      "success_opposition_0_1": 0.3047171133,
+      "importance_0_1": 0.1046921423,
+      "owner_agent": "COPYWRITER_AGENT",
+      "feature_role": "controllable"
+    },
+    {
+      "feature": "content_pillar",
+      "value": "New Arrivals & Giveaways",
+      "direction": "supports_success",
+      "raw_shap_log_odds": 0.2754631164,
+      "success_support_0_1": 0.3931192795,
+      "success_opposition_0_1": 0.0,
+      "importance_0_1": 0.3006527955,
+      "owner_agent": "CAMPAIGN_AGENT",
+      "feature_role": "controllable"
+    },
+    {
+      "feature": "caption_length",
+      "value": 303.0,
+      "direction": "opposes_success",
+      "raw_shap_log_odds": -0.0015993542,
+      "success_support_0_1": 0.0,
+      "success_opposition_0_1": 0.010884868,
+      "importance_0_1": 0.00147822,
+      "owner_agent": "COPYWRITER_AGENT",
+      "feature_role": "controllable"
+    },
+    {
+      "feature": "word_count",
+      "value": 62.0,
+      "direction": "supports_success",
+      "raw_shap_log_odds": 0.0093744441,
+      "success_support_0_1": 0.0133784688,
+      "success_opposition_0_1": 0.0,
+      "importance_0_1": 0.0086644289,
+      "owner_agent": "COPYWRITER_AGENT",
+      "feature_role": "controllable"
+    },
+    {
+      "feature": "emoji_count",
+      "value": 8.0,
+      "direction": "supports_success",
+      "raw_shap_log_odds": 0.0379275781,
+      "success_support_0_1": 0.0541272545,
+      "success_opposition_0_1": 0.0,
+      "importance_0_1": 0.0350549646,
+      "owner_agent": "COPYWRITER_AGENT",
+      "feature_role": "controllable"
+    },
+    {
+      "feature": "number_of_ctas",
+      "value": 1.0,
+      "direction": "supports_success",
+      "raw_shap_log_odds": 0.0024801764,
+      "success_support_0_1": 0.0035395126,
+      "success_opposition_0_1": 0.0,
+      "importance_0_1": 0.0022923292,
+      "owner_agent": "COPYWRITER_AGENT",
+      "feature_role": "controllable"
+    },
+    {
+      "feature": "number_of_hashtags",
+      "value": 0.0,
+      "direction": "opposes_success",
+      "raw_shap_log_odds": -0.011132652,
+      "success_support_0_1": 0.0,
+      "success_opposition_0_1": 0.0757664859,
+      "importance_0_1": 0.0102894712,
+      "owner_agent": "COPYWRITER_AGENT",
+      "feature_role": "controllable"
+    },
+    {
+      "feature": "number_of_products",
+      "value": 1.0,
+      "direction": "opposes_success",
+      "raw_shap_log_odds": -0.0016313279,
+      "success_support_0_1": 0.0,
+      "success_opposition_0_1": 0.0111024744,
+      "importance_0_1": 0.0015077721,
+      "owner_agent": "CAMPAIGN_AGENT",
+      "feature_role": "controllable"
+    },
+    {
+      "feature": "contains_human",
+      "value": "No",
+      "direction": "supports_success",
+      "raw_shap_log_odds": 0.0008576984,
+      "success_support_0_1": 0.0012240397,
+      "success_opposition_0_1": 0.0,
+      "importance_0_1": 0.0007927368,
+      "owner_agent": "DESIGNER_AGENT",
+      "feature_role": "controllable"
+    },
+    {
+      "feature": "dominant_colors",
+      "value": "#E8EBF1 (white); #619EA9 (cyan); #90CAD5 (light cyan)",
+      "direction": "supports_success",
+      "raw_shap_log_odds": 0.0272925409,
+      "success_support_0_1": 0.0389497664,
+      "success_opposition_0_1": 0.0,
+      "importance_0_1": 0.0725990253,
+      "owner_agent": "DESIGNER_AGENT",
+      "feature_role": "brand_constraint"
+    },
+    {
+      "feature": "logo_position",
+      "value": "Samsung: top-left; Al Boraq: top-right",
+      "direction": "supports_success",
+      "raw_shap_log_odds": 0.0001083301,
+      "success_support_0_1": 0.0001546002,
+      "success_opposition_0_1": 0.0,
+      "importance_0_1": 0.0001001252,
+      "owner_agent": "DESIGNER_AGENT",
+      "feature_role": "brand_constraint"
+    },
+    {
+      "feature": "visual_style",
+      "value": "Product hero poster",
+      "direction": "opposes_success",
+      "raw_shap_log_odds": -0.0035254513,
+      "success_support_0_1": 0.0,
+      "success_opposition_0_1": 0.0239934794,
+      "importance_0_1": 0.0135319243,
+      "owner_agent": "DESIGNER_AGENT",
+      "feature_role": "controllable"
+    },
+    {
+      "feature": "layout_type",
+      "value": "Centered product with headline",
+      "direction": "opposes_success",
+      "raw_shap_log_odds": -0.0168166731,
+      "success_support_0_1": 0.0,
+      "success_opposition_0_1": 0.1144507361,
+      "importance_0_1": 0.0155429877,
+      "owner_agent": "DESIGNER_AGENT",
+      "feature_role": "controllable"
+    },
+    {
+      "feature": "image_count",
+      "value": 1.0,
+      "direction": "neutral",
+      "raw_shap_log_odds": 0.0,
+      "success_support_0_1": 0.0,
+      "success_opposition_0_1": -0.0,
+      "importance_0_1": 0.0,
+      "owner_agent": "DESIGNER_AGENT",
+      "feature_role": "controllable"
+    },
+    {
+      "feature": "is_product_post",
+      "value": "Yes",
+      "direction": "opposes_success",
+      "raw_shap_log_odds": -0.0001294726,
+      "success_support_0_1": 0.0,
+      "success_opposition_0_1": 0.0008811635,
+      "importance_0_1": 0.0001196664,
+      "owner_agent": "CAMPAIGN_AGENT",
+      "feature_role": "context"
+    },
+    {
+      "feature": "text_in_image",
+      "value": "S25 FE; متوفر الآن",
+      "direction": "opposes_success",
+      "raw_shap_log_odds": -0.0446022749,
+      "success_support_0_1": 0.0,
+      "success_opposition_0_1": 0.3035536921,
+      "importance_0_1": 0.0412241236,
+      "owner_agent": "DESIGNER_AGENT",
+      "feature_role": "controllable"
+    },
+    {
+      "feature": "text_similarity_to_success",
+      "value": 0.9265820898005457,
+      "direction": "supports_success",
+      "raw_shap_log_odds": 0.0342005646,
+      "success_support_0_1": 0.0488083541,
+      "success_opposition_0_1": 0.0,
+      "importance_0_1": 0.031610233,
+      "owner_agent": "COPYWRITER_AGENT",
+      "feature_role": "derived"
+    },
+    {
+      "feature": "image_similarity_to_success",
+      "value": 0.8882923829166328,
+      "direction": "supports_success",
+      "raw_shap_log_odds": 0.0299284498,
+      "success_support_0_1": 0.042711528,
+      "success_opposition_0_1": 0.0,
+      "importance_0_1": 0.0276616857,
+      "owner_agent": "DESIGNER_AGENT",
+      "feature_role": "derived"
+    }
+  ],
+  "top_success_driver": "content_pillar",
+  "top_success_driver_score_0_1": 0.3931192795,
+  "agent_effects": {
+    "CAMPAIGN_AGENT": 0.4273836641,
+    "COPYWRITER_AGENT": 0.4855211755,
+    "DESIGNER_AGENT": 0.0830399343,
+    "SCHEDULER_AGENT": 0.0040552264
+  },
+  "agent_importance": {
+    "CAMPAIGN_AGENT": 0.3381982999,
+    "COPYWRITER_AGENT": 0.4677977748,
+    "DESIGNER_AGENT": 0.1714526086,
+    "SCHEDULER_AGENT": 0.0225513167
+  },
+  "agent_attributions": {
+    "CAMPAIGN_AGENT": [
+      {
+        "feature": "content_pillar",
+        "value": "New Arrivals & Giveaways",
+        "direction": "supports_success",
+        "raw_shap_log_odds": 0.2754631164,
+        "success_support_0_1": 0.3931192795,
+        "success_opposition_0_1": 0.0,
+        "importance_0_1": 0.3006527955,
+        "owner_agent": "CAMPAIGN_AGENT",
+        "feature_role": "controllable"
+      },
+      {
+        "feature": "campaign_type",
+        "value": "Product Launch + Giveaway",
+        "direction": "supports_success",
+        "raw_shap_log_odds": 0.0112822934,
+        "success_support_0_1": 0.0161012012,
+        "success_opposition_0_1": 0.0,
+        "importance_0_1": 0.0139911189,
+        "owner_agent": "CAMPAIGN_AGENT",
+        "feature_role": "controllable"
+      },
+      {
+        "feature": "product_category",
+        "value": "Mobile",
+        "direction": "supports_success",
+        "raw_shap_log_odds": 0.0127271476,
+        "success_support_0_1": 0.0181631834,
+        "success_opposition_0_1": 0.0,
+        "importance_0_1": 0.0130876808,
+        "owner_agent": "CAMPAIGN_AGENT",
+        "feature_role": "context"
+      },
+      {
+        "feature": "campaign_goal",
+        "value": "Sales Conversion",
+        "direction": "opposes_success",
+        "raw_shap_log_odds": -0.0071396985,
+        "success_support_0_1": 0.0,
+        "success_opposition_0_1": 0.0485912851,
+        "importance_0_1": 0.0083710751,
+        "owner_agent": "CAMPAIGN_AGENT",
+        "feature_role": "context"
+      },
+      {
+        "feature": "number_of_products",
+        "value": 1.0,
+        "direction": "opposes_success",
+        "raw_shap_log_odds": -0.0016313279,
+        "success_support_0_1": 0.0,
+        "success_opposition_0_1": 0.0111024744,
+        "importance_0_1": 0.0015077721,
+        "owner_agent": "CAMPAIGN_AGENT",
+        "feature_role": "controllable"
+      },
+      {
+        "feature": "brand_name",
+        "value": "Samsung",
+        "direction": "opposes_success",
+        "raw_shap_log_odds": -0.0005065575,
+        "success_support_0_1": 0.0,
+        "success_opposition_0_1": 0.0034475237,
+        "importance_0_1": 0.0004681911,
+        "owner_agent": "CAMPAIGN_AGENT",
+        "feature_role": "context"
+      },
+      {
+        "feature": "is_product_post",
+        "value": "Yes",
+        "direction": "opposes_success",
+        "raw_shap_log_odds": -0.0001294726,
+        "success_support_0_1": 0.0,
+        "success_opposition_0_1": 0.0008811635,
+        "importance_0_1": 0.0001196664,
+        "owner_agent": "CAMPAIGN_AGENT",
+        "feature_role": "context"
+      },
+      {
+        "feature": "season",
+        "value": "الصيف",
+        "direction": "neutral",
+        "raw_shap_log_odds": 0.0,
+        "success_support_0_1": 0.0,
+        "success_opposition_0_1": -0.0,
+        "importance_0_1": 0.0,
+        "owner_agent": "CAMPAIGN_AGENT",
+        "feature_role": "context"
+      }
+    ],
+    "COPYWRITER_AGENT": [
+      {
+        "feature": "tone",
+        "value": "Playful, Promotional, Urgent",
+        "direction": "supports_success",
+        "raw_shap_log_odds": 0.1211740306,
+        "success_support_0_1": 0.1729300396,
+        "success_opposition_0_1": 0.0,
+        "importance_0_1": 0.1295988847,
+        "owner_agent": "COPYWRITER_AGENT",
+        "feature_role": "controllable"
+      },
+      {
+        "feature": "hook_style",
+        "value": "Question + product reveal",
+        "direction": "supports_success",
+        "raw_shap_log_odds": 0.1227353237,
+        "success_support_0_1": 0.1751581941,
+        "success_opposition_0_1": 0.0,
+        "importance_0_1": 0.1220319157,
+        "owner_agent": "COPYWRITER_AGENT",
+        "feature_role": "controllable"
+      },
+      {
+        "feature": "writing_style",
+        "value": "Question hook; Product reveal; Giveaway",
+        "direction": "opposes_success",
+        "raw_shap_log_odds": -0.0447732207,
+        "success_support_0_1": 0.0,
+        "success_opposition_0_1": 0.3047171133,
+        "importance_0_1": 0.1046921423,
+        "owner_agent": "COPYWRITER_AGENT",
+        "feature_role": "controllable"
+      },
+      {
+        "feature": "emoji_count",
+        "value": 8.0,
+        "direction": "supports_success",
+        "raw_shap_log_odds": 0.0379275781,
+        "success_support_0_1": 0.0541272545,
+        "success_opposition_0_1": 0.0,
+        "importance_0_1": 0.0350549646,
+        "owner_agent": "COPYWRITER_AGENT",
+        "feature_role": "controllable"
+      },
+      {
+        "feature": "text_similarity_to_success",
+        "value": 0.9265820898005457,
+        "direction": "supports_success",
+        "raw_shap_log_odds": 0.0342005646,
+        "success_support_0_1": 0.0488083541,
+        "success_opposition_0_1": 0.0,
+        "importance_0_1": 0.031610233,
+        "owner_agent": "COPYWRITER_AGENT",
+        "feature_role": "derived"
+      },
+      {
+        "feature": "number_of_hashtags",
+        "value": 0.0,
+        "direction": "opposes_success",
+        "raw_shap_log_odds": -0.011132652,
+        "success_support_0_1": 0.0,
+        "success_opposition_0_1": 0.0757664859,
+        "importance_0_1": 0.0102894712,
+        "owner_agent": "COPYWRITER_AGENT",
+        "feature_role": "controllable"
+      },
+      {
+        "feature": "cta_type",
+        "value": "Buy",
+        "direction": "opposes_success",
+        "raw_shap_log_odds": -0.0072766336,
+        "success_support_0_1": 0.0,
+        "success_opposition_0_1": 0.0495232363,
+        "importance_0_1": 0.0100374296,
+        "owner_agent": "COPYWRITER_AGENT",
+        "feature_role": "controllable"
+      },
+      {
+        "feature": "word_count",
+        "value": 62.0,
+        "direction": "supports_success",
+        "raw_shap_log_odds": 0.0093744441,
+        "success_support_0_1": 0.0133784688,
+        "success_opposition_0_1": 0.0,
+        "importance_0_1": 0.0086644289,
+        "owner_agent": "COPYWRITER_AGENT",
+        "feature_role": "controllable"
+      },
+      {
+        "feature": "cta_presence",
+        "value": "Implicit",
+        "direction": "supports_success",
+        "raw_shap_log_odds": 0.0078714571,
+        "success_support_0_1": 0.011233524,
+        "success_opposition_0_1": 0.0,
+        "importance_0_1": 0.0074870021,
+        "owner_agent": "COPYWRITER_AGENT",
+        "feature_role": "controllable"
+      },
+      {
+        "feature": "dialect",
+        "value": "Syrian Arabic with MSA/English product terms",
+        "direction": "supports_success",
+        "raw_shap_log_odds": 0.0044465932,
+        "success_support_0_1": 0.0063458278,
+        "success_opposition_0_1": 0.0,
+        "importance_0_1": 0.0045607535,
+        "owner_agent": "COPYWRITER_AGENT",
+        "feature_role": "brand_constraint"
+      },
+      {
+        "feature": "number_of_ctas",
+        "value": 1.0,
+        "direction": "supports_success",
+        "raw_shap_log_odds": 0.0024801764,
+        "success_support_0_1": 0.0035395126,
+        "success_opposition_0_1": 0.0,
+        "importance_0_1": 0.0022923292,
+        "owner_agent": "COPYWRITER_AGENT",
+        "feature_role": "controllable"
+      },
+      {
+        "feature": "caption_length",
+        "value": 303.0,
+        "direction": "opposes_success",
+        "raw_shap_log_odds": -0.0015993542,
+        "success_support_0_1": 0.0,
+        "success_opposition_0_1": 0.010884868,
+        "importance_0_1": 0.00147822,
+        "owner_agent": "COPYWRITER_AGENT",
+        "feature_role": "controllable"
+      },
+      {
+        "feature": "language",
+        "value": "Arabic",
+        "direction": "neutral",
+        "raw_shap_log_odds": 0.0,
+        "success_support_0_1": 0.0,
+        "success_opposition_0_1": -0.0,
+        "importance_0_1": 0.0,
+        "owner_agent": "COPYWRITER_AGENT",
+        "feature_role": "brand_constraint"
+      }
+    ],
+    "DESIGNER_AGENT": [
+      {
+        "feature": "dominant_colors",
+        "value": "#E8EBF1 (white); #619EA9 (cyan); #90CAD5 (light cyan)",
+        "direction": "supports_success",
+        "raw_shap_log_odds": 0.0272925409,
+        "success_support_0_1": 0.0389497664,
+        "success_opposition_0_1": 0.0,
+        "importance_0_1": 0.0725990253,
+        "owner_agent": "DESIGNER_AGENT",
+        "feature_role": "brand_constraint"
+      },
+      {
+        "feature": "text_in_image",
+        "value": "S25 FE; متوفر الآن",
+        "direction": "opposes_success",
+        "raw_shap_log_odds": -0.0446022749,
+        "success_support_0_1": 0.0,
+        "success_opposition_0_1": 0.3035536921,
+        "importance_0_1": 0.0412241236,
+        "owner_agent": "DESIGNER_AGENT",
+        "feature_role": "controllable"
+      },
+      {
+        "feature": "image_similarity_to_success",
+        "value": 0.8882923829166328,
+        "direction": "supports_success",
+        "raw_shap_log_odds": 0.0299284498,
+        "success_support_0_1": 0.042711528,
+        "success_opposition_0_1": 0.0,
+        "importance_0_1": 0.0276616857,
+        "owner_agent": "DESIGNER_AGENT",
+        "feature_role": "derived"
+      },
+      {
+        "feature": "layout_type",
+        "value": "Centered product with headline",
+        "direction": "opposes_success",
+        "raw_shap_log_odds": -0.0168166731,
+        "success_support_0_1": 0.0,
+        "success_opposition_0_1": 0.1144507361,
+        "importance_0_1": 0.0155429877,
+        "owner_agent": "DESIGNER_AGENT",
+        "feature_role": "controllable"
+      },
+      {
+        "feature": "visual_style",
+        "value": "Product hero poster",
+        "direction": "opposes_success",
+        "raw_shap_log_odds": -0.0035254513,
+        "success_support_0_1": 0.0,
+        "success_opposition_0_1": 0.0239934794,
+        "importance_0_1": 0.0135319243,
+        "owner_agent": "DESIGNER_AGENT",
+        "feature_role": "controllable"
+      },
+      {
+        "feature": "contains_human",
+        "value": "No",
+        "direction": "supports_success",
+        "raw_shap_log_odds": 0.0008576984,
+        "success_support_0_1": 0.0012240397,
+        "success_opposition_0_1": 0.0,
+        "importance_0_1": 0.0007927368,
+        "owner_agent": "DESIGNER_AGENT",
+        "feature_role": "controllable"
+      },
+      {
+        "feature": "logo_position",
+        "value": "Samsung: top-left; Al Boraq: top-right",
+        "direction": "supports_success",
+        "raw_shap_log_odds": 0.0001083301,
+        "success_support_0_1": 0.0001546002,
+        "success_opposition_0_1": 0.0,
+        "importance_0_1": 0.0001001252,
+        "owner_agent": "DESIGNER_AGENT",
+        "feature_role": "brand_constraint"
+      },
+      {
+        "feature": "image_count",
+        "value": 1.0,
+        "direction": "neutral",
+        "raw_shap_log_odds": 0.0,
+        "success_support_0_1": 0.0,
+        "success_opposition_0_1": -0.0,
+        "importance_0_1": 0.0,
+        "owner_agent": "DESIGNER_AGENT",
+        "feature_role": "controllable"
+      }
+    ],
+    "SCHEDULER_AGENT": [
+      {
+        "feature": "day",
+        "value": "الأربعاء",
+        "direction": "opposes_success",
+        "raw_shap_log_odds": -0.0078004091,
+        "success_support_0_1": 0.0,
+        "success_opposition_0_1": 0.0530879422,
+        "importance_0_1": 0.0156504226,
+        "owner_agent": "SCHEDULER_AGENT",
+        "feature_role": "controllable"
+      },
+      {
+        "feature": "time_bucket",
+        "value": "Late Night",
+        "direction": "supports_success",
+        "raw_shap_log_odds": 0.0028415429,
+        "success_support_0_1": 0.0040552264,
+        "success_opposition_0_1": 0.0,
+        "importance_0_1": 0.0069008941,
+        "owner_agent": "SCHEDULER_AGENT",
+        "feature_role": "controllable"
+      }
+    ]
+  }
+}

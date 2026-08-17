@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
-import { CheckCircle, XCircle, Clock, Loader, Hash, Image, Trash2, CalendarClock } from 'lucide-react'
-import { getPlan, listPosts, approvePost, deletePlan } from '../api/client'
+import { AlertTriangle, CheckCircle, XCircle, Clock, Loader, Hash, Image, Trash2, CalendarClock, RotateCcw } from 'lucide-react'
+import { apiErrorMessage, getPlan, listPosts, approvePost, deletePlan, regeneratePlan } from '../api/client'
 import ImageLightbox from '../components/ImageLightbox'
 
 function formatWhen(iso) {
@@ -56,10 +56,28 @@ export default function CampaignDetailPage() {
     onError: () => toast.error('فشل الحذف'),
   })
 
+  const regenerateMutation = useMutation({
+    mutationFn: () => regeneratePlan(planId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['plan', planId] })
+      qc.invalidateQueries({ queryKey: ['posts', planId] })
+      qc.invalidateQueries({ queryKey: ['plans'] })
+      toast.success('بدأت إعادة توليد الحملة')
+    },
+    onError: (error) => toast.error(apiErrorMessage(error, 'تعذرت إعادة توليد الحملة')),
+  })
+
   const handleDelete = () => {
     if (window.confirm('هل أنتِ متأكدة من حذف هذه الحملة وجميع منشوراتها؟')) {
       deleteMutation.mutate()
     }
+  }
+
+  const handleRegenerate = () => {
+    const confirmed = window.confirm(
+      'ستُحذف النتائج الجزئية غير المعتمدة من المحاولة الفاشلة، ثم ستُولّد الحملة من جديد. هل تريد المتابعة؟'
+    )
+    if (confirmed) regenerateMutation.mutate()
   }
 
   const approvedCount = posts.filter(p => p.approved).length
@@ -107,6 +125,28 @@ export default function CampaignDetailPage() {
           </div>
         )}
       </div>
+
+      {plan?.status === 'failed' && (
+        <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-red-800 flex items-start gap-3">
+          <AlertTriangle size={20} className="mt-0.5 flex-shrink-0"/>
+          <div className="flex-1">
+            <p className="font-bold">فشل توليد الحملة</p>
+            <p className="text-sm mt-1 leading-6">{plan.error_message || 'لم يُحفظ سبب الفشل في هذا التشغيل القديم. أعد المحاولة بعد تحديث النسخة لالتقاط التفاصيل.'}</p>
+            {plan.current_stage && <p className="text-xs mt-2 text-red-600">آخر مرحلة: {plan.current_stage}</p>}
+            <button
+              type="button"
+              onClick={handleRegenerate}
+              disabled={regenerateMutation.isPending}
+              className="mt-4 inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {regenerateMutation.isPending
+                ? <Loader size={16} className="animate-spin" />
+                : <RotateCcw size={16} />}
+              {regenerateMutation.isPending ? 'جاري بدء المحاولة...' : 'إعادة توليد الحملة'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Generating placeholder */}
       {isGenerating && posts.length === 0 && (
@@ -164,7 +204,21 @@ export default function CampaignDetailPage() {
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_BADGE[post.status] || STATUS_BADGE.draft}`}>
                       {post.status === 'approved' ? 'معتمد' : post.status === 'rejected' ? 'مرفوض' : 'قيد المراجعة'}
                     </span>
+                    {post.intelligence_status && post.intelligence_status !== 'not_evaluated' && (
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${post.intelligence_status === 'ready_for_human_review' ? 'bg-indigo-50 text-indigo-700' : 'bg-orange-50 text-orange-700'}`}>
+                        {post.intelligence_status === 'ready_for_human_review' ? 'اجتاز بوابات الذكاء' : 'يحتاج تدقيقاً إضافياً'}
+                      </span>
+                    )}
                   </div>
+
+                  {post.candidate_results?.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-2 text-xs text-gray-500">
+                      <span className="bg-gray-50 px-2 py-1 rounded-lg">3 مرشحين موثّقين</span>
+                      {post.predesign_score != null && <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded-lg">قبل التصميم: {(post.predesign_score * 100).toFixed(1)}%</span>}
+                      {post.multimodal_score != null && <span className="bg-violet-50 text-violet-700 px-2 py-1 rounded-lg">بعد التصميم: {(post.multimodal_score * 100).toFixed(1)}%</span>}
+                      {post.predesign_score == null && <span className="bg-amber-50 text-amber-700 px-2 py-1 rounded-lg">Cold Start: بلا احتمال ادّعائي</span>}
+                    </div>
+                  )}
 
                   {post.hook && (
                     <p className="font-bold text-gray-900 text-sm mb-1">🎯 {post.hook}</p>

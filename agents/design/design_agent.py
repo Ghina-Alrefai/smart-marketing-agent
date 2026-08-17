@@ -33,6 +33,11 @@ def create_design(
         product_info=product_info,
         has_product_image="true" if has_product_image else "false",
         post_type=post_type,
+        external_template_mode=(
+            "مفعّل: القالب سيضاف برمجياً بعد التوليد؛ ممنوع وضع أي شعار أو قالب داخل الصورة."
+            if template_url and template_url.strip()
+            else "غير مفعّل."
+        ),
     )
 
     design_data = call_llm_json(prompt)
@@ -49,9 +54,14 @@ def create_design(
             prompt=image_prompt,
             style_notes=style_notes,
             product_image_url=product_image_url,
+            template_applied_externally=bool(template_url and template_url.strip()),
         )
     else:
-        inner_url = generate_image(image_prompt, style_notes)
+        inner_url = generate_image(
+            image_prompt,
+            style_notes,
+            template_applied_externally=bool(template_url and template_url.strip()),
+        )
 
     if not inner_url:
         design_data["image_url"] = ""
@@ -103,6 +113,11 @@ def design_for_idea(
         has_product_image="true" if has_product_image else "false",
         photo_style=photo_style,
         avoid_concepts=avoid_text,
+        external_template_mode=(
+            "مفعّل: القالب المرفوع سيضاف بعد التوليد، لذلك ممنوع تضمين شعار أو إطار أو قالب أو نص داخل الصورة."
+            if brand_guide.get("template_url")
+            else "غير مفعّل."
+        ),
     )
     # حرارة عالية: التصميم مهمّة إبداعية
     design_data = call_llm_json(prompt, temperature=0.9)
@@ -114,9 +129,18 @@ def design_for_idea(
     # 2) توليد الصورة (بنفس مفهوم الفكرة) وتركيبها على قالب البراند
     if image_prompt:
         if has_product_image:
-            inner = generate_image_with_product(image_prompt, style_notes, product_image_url)
+            inner = generate_image_with_product(
+                image_prompt,
+                style_notes,
+                product_image_url,
+                template_applied_externally=bool(brand_guide.get("template_url")),
+            )
         else:
-            inner = generate_image(image_prompt, style_notes)
+            inner = generate_image(
+                image_prompt,
+                style_notes,
+                template_applied_externally=bool(brand_guide.get("template_url")),
+            )
         if inner:
             image_url = apply_brand_template(
                 inner_image_path=inner,
