@@ -28,7 +28,11 @@ def get_current_user(
     payload = decode_session_token(token)
     if not payload:
         raise HTTPException(status_code=401, detail="جلسة غير صالحة أو منتهية")
-    user = db.query(User).filter(User.id == int(payload["sub"])).first()
+    try:
+        user_id = int(payload["sub"])
+    except (KeyError, TypeError, ValueError):
+        raise HTTPException(status_code=401, detail="رمز الجلسة لا يحتوي هوية مستخدم صالحة")
+    user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=401, detail="المستخدم غير موجود")
     return user
@@ -38,6 +42,12 @@ def require_admin(current: User = Depends(get_current_user)) -> User:
     if current.role != "super_admin":
         raise HTTPException(status_code=403, detail="صلاحيات المشرف مطلوبة")
     return current
+
+
+def ensure_owner(owner_user_id: int, current: User) -> None:
+    """اسمح لصاحب المورد أو للمشرف فقط، ولا تثق في user_id القادم من العميل."""
+    if current.role != "super_admin" and current.id != owner_user_id:
+        raise HTTPException(status_code=403, detail="لا يمكنك الوصول إلى بيانات مستخدم آخر")
 
 
 # ── Google login (regular users) ─────────────────────────────────────────────
@@ -61,11 +71,15 @@ def google_login(payload: GoogleLoginRequest, db: Session = Depends(get_db)):
         )
         db.add(user)
     else:
+        if user.role == "super_admin":
+            raise HTTPException(
+                status_code=403,
+                detail="حساب المشرف يُسجّل الدخول من نموذج المشرف فقط.",
+            )
         # تحديث بيانات الحساب من Google عند كل دخول
         user.google_sub = info["sub"] or user.google_sub
         user.avatar_url = info.get("picture") or user.avatar_url
-        if user.auth_provider != "super_admin":
-            user.auth_provider = "google"
+        user.auth_provider = "google"
     user.last_login_at = utcnow()
     db.commit()
     db.refresh(user)

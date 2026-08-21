@@ -5,7 +5,6 @@ import { LayoutDashboard, Megaphone, Package, Sparkles, Settings, MessageCircle,
 import clsx from 'clsx'
 import useStore from '../store'
 import { getUser } from '../api/client'
-import useStore from '../store'
 
 const baseNav = [
   { to: '/', icon: LayoutDashboard, label: 'الرئيسية' },
@@ -40,7 +39,6 @@ export default function AppLayout() {
   }, [user?.id, setUser, setActiveBrandId])
 
   const navigate = useNavigate()
-  const user = useStore((s) => s.user)
   const logout = useStore((s) => s.logout)
   const isAdmin = user?.role === 'super_admin'
 

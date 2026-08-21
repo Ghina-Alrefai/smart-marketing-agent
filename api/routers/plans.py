@@ -254,6 +254,40 @@ def delete_plan(plan_id: int, db: Session = Depends(get_db)):
     plan = db.query(ContentPlan).filter(ContentPlan.id == plan_id).first()
     if not plan:
         raise HTTPException(404, "Plan not found")
-    db.query(GeneratedPost).filter(GeneratedPost.content_plan_id == plan_id).delete()
-    db.delete(plan)
-    db.commit()
+
+    posts = (
+        db.query(GeneratedPost)
+        .filter(GeneratedPost.content_plan_id == plan_id)
+        .all()
+    )
+    post_ids = [post.id for post in posts]
+    product_counts = Counter(
+        post.product_id for post in posts if post.product_id is not None
+    )
+
+    try:
+        # الحذف الجماعي لا يشغّل ORM cascades؛ احذف العلاقات التابعة أولاً
+        # كي يعمل الحذف مع SQLite (foreign_keys=ON) وPostgreSQL بالتساوي.
+        if post_ids:
+            db.query(ScheduledPost).filter(
+                ScheduledPost.generated_post_id.in_(post_ids)
+            ).delete(synchronize_session=False)
+            db.query(PostPerformanceSnapshot).filter(
+                PostPerformanceSnapshot.generated_post_id.in_(post_ids)
+            ).delete(synchronize_session=False)
+            db.query(GeneratedPost).filter(
+                GeneratedPost.id.in_(post_ids)
+            ).delete(synchronize_session=False)
+
+        for product_id, removed_count in product_counts.items():
+            product = db.query(Product).filter(Product.id == product_id).first()
+            if product:
+                product.post_count = max(0, (product.post_count or 0) - removed_count)
+                product.is_marketed = product.post_count > 0
+
+        db.delete(plan)
+        db.commit()
+    except Exception:
+        db.rollback()
+        logger.exception("campaign.delete_failed plan_id=%s", plan_id)
+        raise HTTPException(500, "تعذّر حذف الحملة بأمان.")

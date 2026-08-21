@@ -1,4 +1,4 @@
-# SmartSocial AI — النسخة المدمجة للجنة (v1.1.3)
+# SmartSocial AI — النسخة المدمجة الكاملة (v1.2.0)
 
 نسخة متكاملة من مشروع الفريق مع **Stable Brand DNA v1.1.0** و**Adaptive Memory**، مع الحفاظ على الـworkflow المتفق عليه:
 
@@ -75,6 +75,10 @@ python scripts/preload_models.py
 | المتغير | الغرض | الافتراضي |
 |---|---|---|
 | `GOOGLE_API_KEY` | Gemini للنص والصورة | مطلوب للتوليد الحقيقي |
+| `GOOGLE_CLIENT_ID` | التحقق الخلفي من Google ID Token | مطلوب لدخول Google |
+| `VITE_GOOGLE_CLIENT_ID` | إظهار زر Google في React؛ يجب أن يطابق القيمة السابقة | مطلوب لدخول Google |
+| `SECRET_KEY` | توقيع جلسات الدخول | يجب تغييره في الإنتاج |
+| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | حساب المشرف المحلي | قيم تطوير فقط؛ غيّر كلمة المرور |
 | `GEMINI_MODEL` | نموذج النص | `gemini-2.5-flash` |
 | `GEMINI_IMAGE_MODEL` | نموذج الصورة | `gemini-3.1-flash-image` |
 | `DATABASE_URL` | قاعدة التطبيق | `sqlite:///./marketing_os.db` |
@@ -89,7 +93,10 @@ python scripts/preload_models.py
 | `LOG_TO_FILE` | حفظ السجل في ملف دوّار إضافةً إلى Terminal | `true` |
 | `SQL_ECHO` | طباعة SQL الخام للتشخيص المحلي المؤقت فقط | `false` |
 
-انسخ `.env.example` إلى `.env` ولا تضع المفتاح داخل Git.
+انسخ `.env.example` إلى `.env` ولا تضع المفاتيح داخل Git. بعد تعديل أي متغير
+يبدأ بـ `VITE_` أعد بناء الواجهة عبر `cd frontend && npm run build`. يرفض الخادم
+العمل في وضع `production` إذا بقي `SECRET_KEY` أو كلمة مرور المشرف على القيمة
+التجريبية الافتراضية.
 
 ## تشخيص الأخطاء والـLogger
 
@@ -154,4 +161,4 @@ cd frontend && npm run build
 - `docs/TESTING_GUIDE_AR.md`: سيناريوهات الاختبار والتحضير للعرض.
 - `docs/full_workflow.html`: الـworkflow البصري الأصلي المتفق عليه مع الفريق.
 
-إصدار التطبيق: `1.1.3-integrated` — أغسطس 2026. إصدار Brand DNA المضمّن: `1.1.0`.
+إصدار التطبيق: `1.2.0-merged` — أغسطس 2026. إصدار Brand DNA المضمّن: `1.1.0`.

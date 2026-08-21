@@ -10,6 +10,7 @@ import re
 import time
 
 from config import settings
+from monitoring.usage_tracker import track_llm_call
 
 _CLIENT = None
 logger = logging.getLogger("smartsocial.llm")

@@ -5,7 +5,7 @@ import logging
 from pathlib import Path
 from time import perf_counter
 
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -25,8 +25,25 @@ logger = configure_logging()
 
 from database.session import init_db, seed_admin
 from api.routers import users, brands, products, plans, chat, scheduled, events, intelligence, auth, monitoring
+from api.routers.auth import get_current_user
+
+
+def _validate_security_settings() -> None:
+    production = settings.APP_ENV.strip().lower() in {"production", "prod"}
+    unsafe = []
+    if settings.SECRET_KEY == "change-me-in-production":
+        unsafe.append("SECRET_KEY")
+    if settings.ADMIN_PASSWORD == "admin2026":
+        unsafe.append("ADMIN_PASSWORD")
+    if production and unsafe:
+        raise RuntimeError(
+            "Production startup refused: replace unsafe defaults for " + ", ".join(unsafe)
+        )
+    if unsafe:
+        logger.warning("security.development_defaults_active settings=%s", ",".join(unsafe))
 
 # ── Init DB on startup ─────────────────────────────────────────────────────
+_validate_security_settings()
 try:
     init_db()
 except Exception:
@@ -38,7 +55,7 @@ seed_admin()   # يهيّئ حساب المشرف الثابت إن لم يكن 
 app = FastAPI(
     title="AI Marketing OS",
     description="نظام تشغيل تسويقي مبني على الذكاء الاصطناعي",
-    version="1.1.3-integrated",
+    version="1.2.0-merged",
 )
 
 
@@ -124,14 +141,16 @@ app.mount("/uploads", StaticFiles(directory=str(uploads_path)), name="uploads")
 
 # ── Routers ────────────────────────────────────────────────────────────────
 app.include_router(auth.router, prefix="/api/v1")
-app.include_router(users.router, prefix="/api/v1")
-app.include_router(brands.router, prefix="/api/v1")
-app.include_router(products.router, prefix="/api/v1")
-app.include_router(plans.router, prefix="/api/v1")
-app.include_router(chat.router, prefix="/api/v1")
-app.include_router(scheduled.router, prefix="/api/v1")
-app.include_router(events.router, prefix="/api/v1")
-app.include_router(intelligence.router, prefix="/api/v1")
+_authenticated = [Depends(get_current_user)]
+app.include_router(users.router, prefix="/api/v1", dependencies=_authenticated)
+app.include_router(brands.router, prefix="/api/v1", dependencies=_authenticated)
+app.include_router(products.router, prefix="/api/v1", dependencies=_authenticated)
+app.include_router(plans.router, prefix="/api/v1", dependencies=_authenticated)
+app.include_router(chat.router, prefix="/api/v1", dependencies=_authenticated)
+app.include_router(scheduled.router, prefix="/api/v1", dependencies=_authenticated)
+app.include_router(events.router, prefix="/api/v1", dependencies=_authenticated)
+app.include_router(intelligence.router, prefix="/api/v1", dependencies=_authenticated)
+app.include_router(monitoring.router, prefix="/api/v1")
 
 
 @app.on_event("shutdown")
@@ -139,7 +158,6 @@ def shutdown_intelligence() -> None:
     from services.brand_intelligence_service import close_memory_service
 
     close_memory_service()
-app.include_router(monitoring.router, prefix="/api/v1")
 
 # ── Serve React frontend build ─────────────────────────────────────────────
 _frontend_dist = Path(__file__).parent / "frontend" / "dist"

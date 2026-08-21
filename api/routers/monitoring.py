@@ -81,16 +81,22 @@ def get_overview(
 
     # اتجاه زمني يومي (آخر 14 يوماً ضمن النطاق)
     trend_start = _range_start(period) or (datetime.utcnow() - timedelta(days=14))
+    dialect = db.get_bind().dialect.name
+    day_expr = (
+        func.strftime("%Y-%m-%d", LLMUsageLog.created_at)
+        if dialect == "sqlite"
+        else func.to_char(LLMUsageLog.created_at, "YYYY-MM-DD")
+    )
     daily = (
         q.filter(LLMUsageLog.created_at >= trend_start)
         .with_entities(
-            func.strftime("%Y-%m-%d", LLMUsageLog.created_at).label("day"),
+            day_expr.label("day"),
             func.coalesce(func.sum(LLMUsageLog.estimated_cost), 0).label("cost"),
             func.coalesce(func.sum(LLMUsageLog.total_tokens), 0).label("tokens"),
             func.count(LLMUsageLog.id).label("requests"),
         )
-        .group_by("day")
-        .order_by("day")
+        .group_by(day_expr)
+        .order_by(day_expr)
         .all()
     )
 

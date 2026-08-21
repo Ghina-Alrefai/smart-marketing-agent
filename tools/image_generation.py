@@ -12,6 +12,7 @@ from pathlib import Path
 import httpx
 
 from config import settings
+from monitoring.usage_tracker import track_llm_call
 
 _CLIENT = None
 
@@ -112,13 +113,22 @@ def generate_image(
     try:
         from google.genai import types
 
-        response = _client().models.generate_content(
-            model=settings.GEMINI_IMAGE_MODEL,
-            contents=full_prompt,
-            config=types.GenerateContentConfig(
-                response_modalities=["IMAGE", "TEXT"]
-            ),
-        )
+        with track_llm_call(
+            model_name=settings.GEMINI_IMAGE_MODEL,
+            agent_name="image_generator",
+        ) as usage:
+            response = _client().models.generate_content(
+                model=settings.GEMINI_IMAGE_MODEL,
+                contents=full_prompt,
+                config=types.GenerateContentConfig(
+                    response_modalities=["IMAGE", "TEXT"]
+                ),
+            )
+            meta = getattr(response, "usage_metadata", None)
+            usage.set_tokens(
+                getattr(meta, "prompt_token_count", 0) or 0,
+                getattr(meta, "candidates_token_count", 0) or 0,
+            )
         return _extract_image_from_response(response)
     except Exception as exc:
         print(f"[ImageGen] Error: {exc}")
@@ -179,13 +189,22 @@ def generate_image_with_product(
             types.Part.from_bytes(data=product_bytes, mime_type=product_mime),
             full_prompt,
         ]
-        response = _client().models.generate_content(
-            model=settings.GEMINI_IMAGE_MODEL,
-            contents=contents,
-            config=types.GenerateContentConfig(
-                response_modalities=["IMAGE", "TEXT"]
-            ),
-        )
+        with track_llm_call(
+            model_name=settings.GEMINI_IMAGE_MODEL,
+            agent_name="image_generator",
+        ) as usage:
+            response = _client().models.generate_content(
+                model=settings.GEMINI_IMAGE_MODEL,
+                contents=contents,
+                config=types.GenerateContentConfig(
+                    response_modalities=["IMAGE", "TEXT"]
+                ),
+            )
+            meta = getattr(response, "usage_metadata", None)
+            usage.set_tokens(
+                getattr(meta, "prompt_token_count", 0) or 0,
+                getattr(meta, "candidates_token_count", 0) or 0,
+            )
         result = _extract_image_from_response(response)
         if result:
             return result

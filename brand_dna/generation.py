@@ -10,6 +10,7 @@ from typing import Any, Callable
 from pydantic import ValidationError
 
 from adaptive_memory.services import MemoryService
+from monitoring.usage_tracker import track_llm_call
 from smart_social_contracts import AgentType
 
 from .candidate_models import GeneratedCandidate, GeneratedDesignPrompt
@@ -609,7 +610,14 @@ def generate_candidates(
             repair_feedback,
         )
         try:
-            response = client.models.generate_content(model=model_name, contents=prompt)
+            with track_llm_call(model_name=model_name, agent_name="content_agent") as usage:
+                usage.retry_count = attempt - 1
+                response = client.models.generate_content(model=model_name, contents=prompt)
+                meta = getattr(response, "usage_metadata", None)
+                usage.set_tokens(
+                    getattr(meta, "prompt_token_count", 0) or 0,
+                    getattr(meta, "candidates_token_count", 0) or 0,
+                )
             data = _json_from_response(response.text)
         except Exception as exc:
             repair_feedback = [f"Generation/JSON error: {exc}"]
@@ -784,7 +792,14 @@ def generate_design_prompt(
             template_applied_externally,
         )
         try:
-            response = client.models.generate_content(model=model_name, contents=prompt)
+            with track_llm_call(model_name=model_name, agent_name="designer_agent") as usage:
+                usage.retry_count = attempt - 1
+                response = client.models.generate_content(model=model_name, contents=prompt)
+                meta = getattr(response, "usage_metadata", None)
+                usage.set_tokens(
+                    getattr(meta, "prompt_token_count", 0) or 0,
+                    getattr(meta, "candidates_token_count", 0) or 0,
+                )
             data = _json_from_response(response.text)
             design = GeneratedDesignPrompt.model_validate(data)
         except Exception as exc:
