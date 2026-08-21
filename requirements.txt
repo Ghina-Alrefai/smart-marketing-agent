@@ -28,3 +28,5 @@ torch>=2.4,<3
 
 # Verification
 pytest>=8,<10
+google-auth>=2.30.0
+PyJWT>=2.8.0

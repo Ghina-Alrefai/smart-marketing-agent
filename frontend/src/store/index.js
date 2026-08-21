@@ -30,9 +30,23 @@ const useStore = create(
     (set, get) => {
       const initial = makeConversation()
       return {
-        // Current user (simple, no auth for MVP)
+        // ── Auth ────────────────────────────────────────────────────────────
         user: null,
+        token: null,
         setUser: (user) => set({ user }),
+
+        // تسجيل الدخول: يخزّن المستخدم والرمز
+        login: ({ user, token }) => set({ user, token }),
+
+        // تسجيل الخروج: يمسح الجلسة ويعيد ضبط المحادثات
+        logout: () => {
+          const c = makeConversation()
+          set({ user: null, token: null, activeBrandId: null,
+                conversations: [c], activeId: c.id })
+        },
+
+        isAuthenticated: () => !!get().token && !!get().user,
+        isAdmin: () => get().user?.role === 'super_admin',
 
         // Active brand
         activeBrandId: null,
@@ -90,6 +104,7 @@ const useStore = create(
       // نُبقي فقط ما يستحق الحفظ
       partialize: (s) => ({
         user: s.user,
+        token: s.token,
         activeBrandId: s.activeBrandId,
         conversations: s.conversations,
         activeId: s.activeId,

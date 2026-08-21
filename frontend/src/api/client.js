@@ -1,4 +1,5 @@
 import axios from 'axios'
+import useStore from '../store'
 
 const api = axios.create({ baseURL: '/api/v1', headers: { 'Content-Type': 'application/json' } })
 
@@ -40,6 +41,30 @@ api.interceptors.response.use(
     return Promise.reject(error)
   },
 )
+
+// أرفق رمز الجلسة تلقائياً على كل طلب
+api.interceptors.request.use((config) => {
+  const token = useStore.getState().token
+  if (token) config.headers.Authorization = `Bearer ${token}`
+  return config
+})
+
+// عند انتهاء الجلسة (401) سجّل الخروج تلقائياً
+api.interceptors.response.use(
+  (res) => res,
+  (err) => {
+    if (err.response?.status === 401 && useStore.getState().token) {
+      useStore.getState().logout()
+    }
+    return Promise.reject(err)
+  }
+)
+
+// Auth
+export const googleLogin = (credential) => api.post('/auth/google', { credential })
+export const adminLogin  = (email, password) => api.post('/auth/admin-login', { email, password })
+export const fetchMe     = () => api.get('/auth/me')
+export const listAllUsers = () => api.get('/auth/users')
 
 // Users
 export const createUser = (data) => api.post('/users/', data)
@@ -112,5 +137,11 @@ export const updateScheduledTime = (id, scheduledAt) =>
 // Events (المناسبات ضمن مدة الحملة)
 export const listEvents = (start, days) =>
   api.get(`/events/`, { params: { start, days } })
+
+// Monitoring — مراقبة استهلاك الموارد وتكلفة تنفيذ الوكلاء
+export const getMonitoringOverview  = (period) => api.get('/monitoring/overview', { params: { period } })
+export const getMonitoringAgents    = (period) => api.get('/monitoring/agents', { params: { period } })
+export const getMonitoringCampaigns = (period, limit = 20) => api.get('/monitoring/campaigns', { params: { period, limit } })
+export const getMonitoringErrors    = (period, limit = 20) => api.get('/monitoring/errors', { params: { period, limit } })
 
 export default api

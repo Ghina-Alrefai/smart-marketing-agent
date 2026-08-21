@@ -8,8 +8,26 @@ class UserCreate(BaseModel):
     email: EmailStr
 
 class UserOut(BaseModel):
-    id: int; name: str; email: str; plan: str; created_at: datetime
+    id: int; name: str; email: str; plan: str
+    role: str = "user"
+    auth_provider: str = "google"
+    avatar_url: str | None = None
+    last_login_at: datetime | None = None
+    created_at: datetime
     model_config = {"from_attributes": True}
+
+
+# ── Authentication ───────────────────────────────────────────────────────────
+class GoogleLoginRequest(BaseModel):
+    credential: str          # الـ ID token القادم من Google Identity Services
+
+class AdminLoginRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+class AuthResponse(BaseModel):
+    token: str
+    user: UserOut
 
 
 class BrandCreate(BaseModel):

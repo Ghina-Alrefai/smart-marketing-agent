@@ -23,8 +23,8 @@ from logging_config import (
 
 logger = configure_logging()
 
-from database.session import init_db
-from api.routers import users, brands, products, plans, chat, scheduled, events, intelligence
+from database.session import init_db, seed_admin
+from api.routers import users, brands, products, plans, chat, scheduled, events, intelligence, auth, monitoring
 
 # ── Init DB on startup ─────────────────────────────────────────────────────
 try:
@@ -32,6 +32,7 @@ try:
 except Exception:
     logger.exception("database.initialization_failed")
     raise
+seed_admin()   # يهيّئ حساب المشرف الثابت إن لم يكن موجوداً
 
 # ── App ────────────────────────────────────────────────────────────────────
 app = FastAPI(
@@ -122,6 +123,7 @@ uploads_path.mkdir(parents=True, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=str(uploads_path)), name="uploads")
 
 # ── Routers ────────────────────────────────────────────────────────────────
+app.include_router(auth.router, prefix="/api/v1")
 app.include_router(users.router, prefix="/api/v1")
 app.include_router(brands.router, prefix="/api/v1")
 app.include_router(products.router, prefix="/api/v1")
@@ -137,6 +139,7 @@ def shutdown_intelligence() -> None:
     from services.brand_intelligence_service import close_memory_service
 
     close_memory_service()
+app.include_router(monitoring.router, prefix="/api/v1")
 
 # ── Serve React frontend build ─────────────────────────────────────────────
 _frontend_dist = Path(__file__).parent / "frontend" / "dist"
