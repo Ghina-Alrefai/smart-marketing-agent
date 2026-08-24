@@ -11,11 +11,12 @@ const uid = () =>
     ? crypto.randomUUID()
     : `c_${Date.now()}_${Math.floor(Math.random() * 1e6)}`
 
-const makeConversation = () => ({
+const makeConversation = (brandId = null) => ({
   id: uid(),
   title: 'محادثة جديدة',
   messages: [CHAT_GREETING],
   sessionId: null,
+  brandId,
   createdAt: Date.now(),
 })
 
@@ -58,21 +59,54 @@ const useStore = create(
 
         newConversation: () =>
           set((s) => {
-            const c = makeConversation()
+            const c = makeConversation(s.activeBrandId)
             return { conversations: [c, ...s.conversations], activeId: c.id }
           }),
 
-        switchConversation: (id) => set({ activeId: id }),
+        switchConversation: (id) =>
+          set((s) => {
+            const conversation = s.conversations.find((c) => c.id === id)
+            return {
+              activeId: id,
+              ...(conversation?.brandId ? { activeBrandId: conversation.brandId } : {}),
+            }
+          }),
+
+        // كل جلسة Orchestrator تخزّن Brand Guidelines مؤقتاً؛ لذلك لا نعيد
+        // استخدام نفس sessionId عند الانتقال إلى براند آخر.
+        ensureConversationBrand: (brandId) =>
+          set((s) => {
+            if (!brandId) return {}
+            const active = s.conversations.find((c) => c.id === s.activeId)
+            if (!active) {
+              const c = makeConversation(brandId)
+              return { conversations: [c, ...s.conversations], activeId: c.id }
+            }
+            if (active.brandId == null) {
+              return {
+                conversations: s.conversations.map((c) =>
+                  c.id === s.activeId ? { ...c, brandId } : c
+                ),
+              }
+            }
+            if (active.brandId === brandId) return {}
+            const c = makeConversation(brandId)
+            return { conversations: [c, ...s.conversations], activeId: c.id }
+          }),
 
         deleteConversation: (id) =>
           set((s) => {
             const rest = s.conversations.filter((c) => c.id !== id)
             if (rest.length === 0) {
-              const c = makeConversation()
+              const c = makeConversation(s.activeBrandId)
               return { conversations: [c], activeId: c.id }
             }
-            const activeId = s.activeId === id ? rest[0].id : s.activeId
-            return { conversations: rest, activeId }
+            if (s.activeId !== id) return { conversations: rest }
+            return {
+              conversations: rest,
+              activeId: rest[0].id,
+              ...(rest[0].brandId ? { activeBrandId: rest[0].brandId } : {}),
+            }
           }),
 
         // تحديث رسائل المحادثة النشطة (يقبل دالة أو قيمة) + تحديث العنوان

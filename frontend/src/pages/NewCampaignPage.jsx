@@ -1,10 +1,10 @@
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { Sparkles, CalendarDays, Package, Check } from 'lucide-react'
 import useStore from '../store'
-import { createPlan, triggerGeneration, listBrands, listProducts, listEvents } from '../api/client'
+import { apiErrorMessage, createPlan, triggerGeneration, listBrands, listProducts, listEvents } from '../api/client'
 
 const GOAL_SUGGESTIONS = [
   'زيادة المبيعات',
@@ -83,6 +83,7 @@ export default function NewCampaignPage() {
 
   const mutation = useMutation({
     mutationFn: async (data) => {
+      if (!user?.id) throw new Error('لا توجد جلسة مستخدم صالحة')
       const payload = {
         ...data,
         // نبقي campaign_goal للتوافق الخلفي (أول هدف)
@@ -97,7 +98,7 @@ export default function NewCampaignPage() {
       toast.success('بدأ التوليد! 🚀')
       navigate(`/campaigns/${planId}`)
     },
-    onError: () => toast.error('حدث خطأ'),
+    onError: (error) => toast.error(apiErrorMessage(error, 'تعذّر إنشاء الحملة'), { duration: 8000 }),
   })
 
   const canSubmit = form.brand_id && form.campaign_goals.length > 0 && form.product_ids.length > 0 && !mutation.isPending
@@ -115,7 +116,7 @@ export default function NewCampaignPage() {
 
         <div>
           <label className="label">البراند *</label>
-          <select className="input" value={form.brand_id} onChange={e => setForm(f => ({ ...f, brand_id: parseInt(e.target.value) }))}>
+          <select className="input" value={form.brand_id} onChange={e => setForm(f => ({ ...f, brand_id: e.target.value ? Number(e.target.value) : '' }))}>
             <option value="">اختر البراند</option>
             {brands.map(b => <option key={b.id} value={b.id}>{b.brand_name}</option>)}
           </select>

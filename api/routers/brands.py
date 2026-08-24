@@ -7,6 +7,9 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from api.schemas import BrandCreate, BrandUpdate, BrandOut, BrandExampleCreate, BrandExampleOut
+from api.ownership import require_brand, require_user
+from api.routers.auth import get_current_user
+from api.upload_validation import validate_image_upload
 from database.models import Brand, BrandExample, User
 from database.session import get_db
 from config import settings
@@ -21,19 +24,15 @@ EXAMPLES_DIR.mkdir(parents=True, exist_ok=True)
 
 
 @router.post("/", response_model=BrandOut, status_code=201)
-def create_brand(user_id: int, payload: BrandCreate, db: Session = Depends(get_db)):
+def create_brand(
+    user_id: int,
+    payload: BrandCreate,
+    current: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     logger.info("brand.create_started user_id=%s", user_id)
     try:
-        user = db.query(User).filter(User.id == user_id).first()
-        if not user:
-            logger.warning("brand.create_rejected user_id=%s reason=user_not_found", user_id)
-            raise HTTPException(
-                status_code=404,
-                detail=(
-                    "المستخدم المرتبط بالبراند غير موجود. قد تكون قاعدة البيانات أُعيد إنشاؤها "
-                    "بينما بقيت بيانات قديمة في المتصفح؛ افتح الإعدادات وأنشئ المستخدم من جديد."
-                ),
-            )
+        require_user(user_id, current, db)
 
         brand = Brand(user_id=user_id, **payload.model_dump())
         db.add(brand)
@@ -66,22 +65,32 @@ def create_brand(user_id: int, payload: BrandCreate, db: Session = Depends(get_d
         ) from exc
 
 @router.get("/user/{user_id}", response_model=list[BrandOut])
-def list_brands(user_id: int, db: Session = Depends(get_db)):
+def list_brands(
+    user_id: int,
+    current: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    require_user(user_id, current, db)
     return db.query(Brand).filter(Brand.user_id == user_id).all()
 
 @router.get("/{brand_id}", response_model=BrandOut)
-def get_brand(brand_id: int, db: Session = Depends(get_db)):
-    b = db.query(Brand).filter(Brand.id == brand_id).first()
-    if not b: raise HTTPException(404, "Brand not found")
-    return b
+def get_brand(
+    brand_id: int,
+    current: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    return require_brand(brand_id, current, db)
 
 @router.patch("/{brand_id}", response_model=BrandOut)
-def update_brand(brand_id: int, payload: BrandUpdate, db: Session = Depends(get_db)):
+def update_brand(
+    brand_id: int,
+    payload: BrandUpdate,
+    current: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     logger.info("brand.update_started brand_id=%s", brand_id)
     try:
-        b = db.query(Brand).filter(Brand.id == brand_id).first()
-        if not b:
-            raise HTTPException(404, "Brand not found")
+        b = require_brand(brand_id, current, db)
         for k, v in payload.model_dump(exclude_none=True).items():
             setattr(b, k, v)
         # Rebuild the stable profile from the edited human-approved identity on the
@@ -110,16 +119,21 @@ def update_brand(brand_id: int, payload: BrandUpdate, db: Session = Depends(get_
         ) from exc
 
 @router.post("/{brand_id}/template")
-async def upload_template(brand_id: int, file: UploadFile = File(...), db: Session = Depends(get_db)):
+async def upload_template(
+    brand_id: int,
+    file: UploadFile = File(...),
+    current: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     """Upload a brand design template PNG. Transparent area will be filled with AI-generated image."""
     logger.info("brand.template_upload_started brand_id=%s", brand_id)
-    b = db.query(Brand).filter(Brand.id == brand_id).first()
-    if not b: raise HTTPException(404, "Brand not found")
-    ext = Path(file.filename or "").suffix or ".png"
-    fname = f"{uuid.uuid4().hex}{ext}"
+    b = require_brand(brand_id, current, db)
+    image = await validate_image_upload(file)
+    fname = f"{uuid.uuid4().hex}{image.extension}"
+    destination = TEMPLATES_DIR / fname
     try:
-        with open(TEMPLATES_DIR / fname, "wb") as f:
-            f.write(await file.read())
+        with open(destination, "wb") as f:
+            f.write(image.content)
         b.template_url = f"/uploads/templates/{fname}"
         b.dna_status = "uninitialized"
         b.dna_profile = {}
@@ -129,6 +143,7 @@ async def upload_template(brand_id: int, file: UploadFile = File(...), db: Sessi
         return {"template_url": b.template_url}
     except (OSError, SQLAlchemyError) as exc:
         db.rollback()
+        destination.unlink(missing_ok=True)
         logger.exception(
             "brand.template_upload_failed brand_id=%s error_type=%s",
             brand_id,
@@ -140,29 +155,49 @@ async def upload_template(brand_id: int, file: UploadFile = File(...), db: Sessi
         ) from exc
 
 @router.post("/{brand_id}/examples", response_model=BrandExampleOut, status_code=201)
-def add_text_example(brand_id: int, payload: BrandExampleCreate, db: Session = Depends(get_db)):
+def add_text_example(
+    brand_id: int,
+    payload: BrandExampleCreate,
+    current: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    require_brand(brand_id, current, db)
     ex = BrandExample(brand_id=brand_id, **payload.model_dump())
     db.add(ex); db.commit(); db.refresh(ex)
     return ex
 
 @router.post("/{brand_id}/examples/image", response_model=BrandExampleOut, status_code=201)
-async def upload_design_example(brand_id: int, file: UploadFile = File(...), db: Session = Depends(get_db)):
-    b = db.query(Brand).filter(Brand.id == brand_id).first()
-    if not b: raise HTTPException(404, "Brand not found")
-    ext = Path(file.filename).suffix or ".png"
-    fname = f"{uuid.uuid4().hex}{ext}"
+async def upload_design_example(
+    brand_id: int,
+    file: UploadFile = File(...),
+    current: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    require_brand(brand_id, current, db)
+    image = await validate_image_upload(file)
+    fname = f"{uuid.uuid4().hex}{image.extension}"
     with open(EXAMPLES_DIR / fname, "wb") as f:
-        f.write(await file.read())
+        f.write(image.content)
     ex = BrandExample(brand_id=brand_id, example_type="design", image_url=f"/uploads/examples/{fname}")
     db.add(ex); db.commit(); db.refresh(ex)
     return ex
 
 @router.delete("/examples/{example_id}", status_code=204)
-def delete_example(example_id: int, db: Session = Depends(get_db)):
+def delete_example(
+    example_id: int,
+    current: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     ex = db.query(BrandExample).filter(BrandExample.id == example_id).first()
     if not ex: raise HTTPException(404, "Not found")
+    require_brand(ex.brand_id, current, db)
     db.delete(ex); db.commit()
 
 @router.get("/{brand_id}/examples", response_model=list[BrandExampleOut])
-def list_examples(brand_id: int, db: Session = Depends(get_db)):
+def list_examples(
+    brand_id: int,
+    current: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    require_brand(brand_id, current, db)
     return db.query(BrandExample).filter(BrandExample.brand_id == brand_id).all()

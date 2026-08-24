@@ -9,9 +9,10 @@ from typing import Any
 
 import pydantic
 
+from config import settings
 from smart_social_contracts import AgentType, FEATURE_REGISTRY
 
-from adaptive_memory.engine import ConsolidationConfig
+from adaptive_memory.engine import ConsolidationConfig, PolicyReviewConfig
 from adaptive_memory.models import InsightStatus, PolicyStatus
 from adaptive_memory.services import MemoryService
 
@@ -57,7 +58,21 @@ def _config(args: argparse.Namespace) -> ConsolidationConfig:
 
 
 def _service(args: argparse.Namespace) -> MemoryService:
-    return MemoryService(db_path=_db(args), consolidation_config=_config(args))
+    return MemoryService(
+        db_path=_db(args),
+        consolidation_config=_config(args),
+        policy_review_config=PolicyReviewConfig(
+            review_interval_days=getattr(args, "review_interval_days", 30),
+            review_grace_days=getattr(args, "review_grace_days", 15),
+            minimum_evaluated_posts=getattr(args, "minimum_review_posts", 8),
+            insufficient_evidence_deferral_days=getattr(
+                args, "review_deferral_days", 14
+            ),
+            max_insufficient_reviews=getattr(
+                args, "max_insufficient_reviews", 2
+            ),
+        ),
+    )
 
 
 def command_init(args: argparse.Namespace) -> None:
@@ -100,6 +115,41 @@ def command_generate_policies(args: argparse.Namespace) -> None:
 def command_activate(args: argparse.Namespace) -> None:
     service = _service(args)
     _write(service.activate_policy(args.policy_id, args.approved_by), args.output)
+
+
+def command_review_policy(args: argparse.Namespace) -> None:
+    service = _service(args)
+    _write(
+        service.review_policy(
+            args.policy_id,
+            reviewed_by=args.reviewed_by,
+            force=args.force,
+        ),
+        args.output,
+    )
+
+
+def command_review_due(args: argparse.Namespace) -> None:
+    service = _service(args)
+    _write(
+        service.review_due_policies(
+            args.brand_id,
+            reviewed_by=args.reviewed_by,
+        ),
+        args.output,
+    )
+
+
+def command_list_reviews(args: argparse.Namespace) -> None:
+    service = _service(args)
+    _write(
+        service.list_policy_reviews(
+            brand_id=args.brand_id,
+            policy_id=args.policy_id,
+            limit=args.limit,
+        ),
+        args.output,
+    )
 
 
 def command_list_insights(args: argparse.Namespace) -> None:
@@ -211,7 +261,7 @@ def command_demo(args: argparse.Namespace) -> None:
 def _add_common_db(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--db",
-        default="outputs/adaptive_memory/adaptive_memory.db",
+        default=settings.ADAPTIVE_MEMORY_DB,
         help="SQLite database path, relative to --project-root unless absolute.",
     )
 
@@ -223,6 +273,14 @@ def _add_thresholds(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--avoid-failure-rate", type=float, default=0.60)
     parser.add_argument("--min-direction-consistency", type=float, default=0.60)
     parser.add_argument("--confidence-threshold", type=float, default=0.60)
+
+
+def _add_review_thresholds(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--review-interval-days", type=int, default=30)
+    parser.add_argument("--review-grace-days", type=int, default=15)
+    parser.add_argument("--minimum-review-posts", type=int, default=8)
+    parser.add_argument("--review-deferral-days", type=int, default=14)
+    parser.add_argument("--max-insufficient-reviews", type=int, default=2)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -280,10 +338,44 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_common_db(activate)
     _add_thresholds(activate)
+    _add_review_thresholds(activate)
     activate.add_argument("--policy-id", required=True)
     activate.add_argument("--approved-by", required=True)
     activate.add_argument("--output")
     activate.set_defaults(func=command_activate)
+
+    review_policy = sub.add_parser(
+        "review-policy", help="Review one active policy using explicitly linked posts."
+    )
+    _add_common_db(review_policy)
+    _add_thresholds(review_policy)
+    _add_review_thresholds(review_policy)
+    review_policy.add_argument("--policy-id", required=True)
+    review_policy.add_argument("--reviewed-by", required=True)
+    review_policy.add_argument("--force", action="store_true")
+    review_policy.add_argument("--output")
+    review_policy.set_defaults(func=command_review_policy)
+
+    review_due = sub.add_parser(
+        "review-due", help="Review all active policies whose monthly review is due."
+    )
+    _add_common_db(review_due)
+    _add_thresholds(review_due)
+    _add_review_thresholds(review_due)
+    review_due.add_argument("--brand-id")
+    review_due.add_argument("--reviewed-by", default="policy-review-cli")
+    review_due.add_argument("--output")
+    review_due.set_defaults(func=command_review_due)
+
+    list_reviews = sub.add_parser("list-reviews")
+    _add_common_db(list_reviews)
+    _add_thresholds(list_reviews)
+    _add_review_thresholds(list_reviews)
+    list_reviews.add_argument("--brand-id")
+    list_reviews.add_argument("--policy-id")
+    list_reviews.add_argument("--limit", type=int, default=100)
+    list_reviews.add_argument("--output")
+    list_reviews.set_defaults(func=command_list_reviews)
 
     insights = sub.add_parser("list-insights")
     _add_common_db(insights)

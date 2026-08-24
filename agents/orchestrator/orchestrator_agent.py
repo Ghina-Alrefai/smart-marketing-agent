@@ -98,7 +98,12 @@ def _match_product(user_id: int, text: str, options: list) -> int | None:
     # صيغة الزر: "product_id:5"
     m = re.search(r"product_id\s*[:=]\s*(\d+)", text)
     if m:
-        return int(m.group(1))
+        requested_id = int(m.group(1))
+        # Never trust an ID embedded in chat text: it must still belong to the
+        # authenticated account whose product collection is being used.
+        if any(item["id"] == requested_id for item in get_products(user_id)):
+            return requested_id
+        return None
     # رقم خيار من القائمة المعروضة (1-based)
     if text.isdigit() and options:
         idx = int(text) - 1
@@ -200,7 +205,11 @@ def handle_message(user_id: int, brand_id: int, message: str,
 
 def _handle_message(user_id: int, brand_id: int, message: str,
                     session_id: str | None, dry_run: bool) -> dict:
-    session = store.get_or_create(session_id)
+    session = store.get_or_create(
+        session_id,
+        owner_user_id=user_id,
+        brand_id=brand_id,
+    )
     session.history.append(("user", message))
     use_llm = not dry_run
 
@@ -216,7 +225,16 @@ def _handle_message(user_id: int, brand_id: int, message: str,
     if not session.intent:
         intent, _ = classify_intent(message, use_llm=use_llm)
         session.intent = intent
-        ents = extract_entities(message, use_llm=use_llm)
+        # For an explicit campaign duration the local extractor already has
+        # every required slot. Avoid a second Gemini round trip before the
+        # background campaign can be launched.
+        campaign_is_locally_complete = (
+            session.intent == "CREATE_CAMPAIGN" and detect_days(message) is not None
+        )
+        ents = extract_entities(
+            message,
+            use_llm=use_llm and not campaign_is_locally_complete,
+        )
         if ents.get("days"):
             session.slots["days"] = ents["days"]
         if ents.get("post_type"):
@@ -385,6 +403,12 @@ def _execute(session, user_id, brand_id, dry_run) -> dict:
         return schedule_post(user_id, last, slots.get("schedule_time"),
                              slots.get("schedule_time_text", ""), dry_run)
 
+    # A campaign owns its complete Brand → Strategy → Content pipeline. Launch
+    # it before resolving chat-only brand guidelines; doing that work here
+    # duplicated Brand Agent/LLM calls and blocked /chat/message for minutes.
+    if intent in ("FULL_PIPELINE", "CREATE_CAMPAIGN"):
+        return _launch_campaign(session, user_id, brand_id, slots, dry_run)
+
     guidelines = _brand_guidelines(session, brand_id, dry_run)
     g_json = json.dumps(guidelines, ensure_ascii=False)
     brand_info = guidelines.get("_brand", {})
@@ -396,10 +420,6 @@ def _execute(session, user_id, brand_id, dry_run) -> dict:
         return build_content_strategy(brand_guidelines=g_json, user_id=user_id,
                                       days=slots.get("days", 3),
                                       campaign_goal="زيادة المبيعات")
-
-    # الحملة الكاملة (خطة/حملة) — كلاهما يستخدم campaign_pipeline الموحّد
-    if intent in ("FULL_PIPELINE", "CREATE_CAMPAIGN"):
-        return _launch_campaign(session, user_id, brand_id, slots, dry_run)
 
     # المسارات التي تحتاج تحليل منتج: WRITE_POST / CREATE_DESIGN / WRITE_AND_DESIGN
     if dry_run:

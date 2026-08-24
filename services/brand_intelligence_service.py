@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from adaptive_memory import MemoryService
+from adaptive_memory.engine import PolicyReviewConfig
 from adaptive_memory.models import InsightStatus, PolicyStatus
 
 from config import settings
@@ -39,7 +40,29 @@ def memory_service() -> MemoryService:
                 db_path = Path(settings.ADAPTIVE_MEMORY_DB)
                 if not db_path.is_absolute():
                     db_path = project_root() / db_path
-                _MEMORY = MemoryService(db_path=db_path)
+                _MEMORY = MemoryService(
+                    db_path=db_path,
+                    policy_review_config=PolicyReviewConfig(
+                        review_interval_days=settings.POLICY_REVIEW_INTERVAL_DAYS,
+                        review_grace_days=settings.POLICY_REVIEW_GRACE_DAYS,
+                        minimum_evaluated_posts=settings.POLICY_REVIEW_MIN_POSTS,
+                        insufficient_evidence_deferral_days=(
+                            settings.POLICY_REVIEW_DEFERRAL_DAYS
+                        ),
+                        max_insufficient_reviews=(
+                            settings.POLICY_REVIEW_MAX_INSUFFICIENT_REVIEWS
+                        ),
+                        renew_min_success_rate_0_1=(
+                            settings.POLICY_REVIEW_RENEW_MIN_SUCCESS_RATE
+                        ),
+                        modify_min_success_rate_0_1=(
+                            settings.POLICY_REVIEW_MODIFY_MIN_SUCCESS_RATE
+                        ),
+                        expire_below_success_rate_0_1=(
+                            settings.POLICY_REVIEW_EXPIRE_BELOW_SUCCESS_RATE
+                        ),
+                    ),
+                )
     return _MEMORY
 
 
@@ -249,6 +272,7 @@ def intelligence_status(brand_id: int, *, db=None) -> dict[str, Any]:
             else {}
         )
         service = memory_service()
+        policy_health = service.get_policy_health(key)
         active = service.get_active_policies(key)
         drafts = service.storage.list_policies(
             brand_id=key, status=PolicyStatus.DRAFT
@@ -277,6 +301,7 @@ def intelligence_status(brand_id: int, *, db=None) -> dict[str, Any]:
                 "evidence_count": evidence_count,
                 "insight_count": len(all_insights),
                 "policy_count": len(all_policies),
+                "policy_health": policy_health,
                 "storage_stats": service.stats(),
             },
             "authority_order": [
@@ -386,6 +411,7 @@ def record_post_performance(
                 page_id=brand_key(brand),
                 campaign_id=str(plan.id),
                 observation_window=window,
+                applied_policy_ids=list(post.memory_policy_ids or []),
             )
             if payload:
                 memory_result = memory_service().ingest_brand_dna_payload(

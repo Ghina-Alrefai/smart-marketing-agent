@@ -21,7 +21,9 @@ const baseNav = [
 const adminNav = [{ to: '/admin/users', icon: Users, label: 'المستخدمون' }]
 
 export default function AppLayout() {
-  const { user, setUser, setActiveBrandId } = useStore()
+  const user = useStore((s) => s.user)
+  const logout = useStore((s) => s.logout)
+  const navigate = useNavigate()
 
   useEffect(() => {
     if (!user?.id) return undefined
@@ -29,17 +31,15 @@ export default function AppLayout() {
 
     getUser(user.id).catch((error) => {
       if (!cancelled && error.response?.status === 404) {
-        setUser(null)
-        setActiveBrandId(null)
-        toast.error('بيانات المستخدم المحلية قديمة. أنشئ المستخدم من شاشة الإعدادات ثم أعد إنشاء البراند.')
+        logout()
+        toast.error('انتهت الجلسة أو لم يعد المستخدم موجوداً. سجّل الدخول مجدداً.')
+        navigate('/login', { replace: true })
       }
     })
 
     return () => { cancelled = true }
-  }, [user?.id, setUser, setActiveBrandId])
+  }, [user?.id, logout, navigate])
 
-  const navigate = useNavigate()
-  const logout = useStore((s) => s.logout)
   const isAdmin = user?.role === 'super_admin'
 
   const navItems = isAdmin ? [...baseNav, ...adminNav] : baseNav

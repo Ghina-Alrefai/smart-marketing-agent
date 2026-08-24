@@ -23,6 +23,7 @@ _HEADER_MAP = {
 }
 
 _IMG_SPLIT = re.compile(r"[|\n،,]+")   # فواصل الصور المحتملة
+_MAX_PRODUCTS_PER_UPLOAD = 5_000
 
 
 def _norm(s) -> str:
@@ -85,12 +86,16 @@ def parse_products_xlsx(file_bytes: bytes) -> tuple[list[dict], list[str]]:
         return [], [f"تعذّر فتح الملف: {exc}"]
 
     ws = wb.active
-    rows = list(ws.iter_rows(values_only=True))
-    if not rows:
+    rows = ws.iter_rows(values_only=True)
+    try:
+        header = next(rows)
+    except StopIteration:
+        wb.close()
         return [], ["الملف فارغ"]
 
-    col = _build_column_index(rows[0])
+    col = _build_column_index(header)
     if "title" not in col:
+        wb.close()
         return [], ["لم يُعثر على عمود «اسم المنتج». تأكّد من رؤوس الأعمدة."]
 
     def cell(row, field):
@@ -98,20 +103,27 @@ def parse_products_xlsx(file_bytes: bytes) -> tuple[list[dict], list[str]]:
         return row[i] if (i is not None and i < len(row)) else None
 
     products: list[dict] = []
-    for n, row in enumerate(rows[1:], start=2):
+    for n, row in enumerate(rows, start=2):
+        if len(products) >= _MAX_PRODUCTS_PER_UPLOAD:
+            errors.append(
+                f"تم إيقاف الاستيراد عند {_MAX_PRODUCTS_PER_UPLOAD} منتج لحماية الخادم."
+            )
+            break
         title = str(cell(row, "title") or "").strip()
         if not title:
             continue   # نتخطّى الأسطر الفارغة بصمت
         images = _parse_images(cell(row, "images"))
         products.append({
             "title": title[:300],
-            "description": str(cell(row, "description") or "").strip() or None,
+            "description": (str(cell(row, "description") or "").strip()[:10_000] or None),
             "price": _parse_price(cell(row, "price")),
             "category": _parse_category(cell(row, "category")),
             "image_url": images[0] if images else None,   # الصورة الأساسية
             "image_urls": images,
-            "source_url": (str(cell(row, "source_url") or "").strip() or None),
+            "source_url": (str(cell(row, "source_url") or "").strip()[:500] or None),
         })
+
+    wb.close()
 
     if not products:
         errors.append("لم يُعثر على أي منتج صالح في الملف.")

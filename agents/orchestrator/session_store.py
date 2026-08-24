@@ -19,6 +19,8 @@ from dataclasses import dataclass, field
 @dataclass
 class Session:
     id: str
+    owner_user_id: int | None = None
+    brand_id: int | None = None
     intent: str | None = None
     slots: dict = field(default_factory=dict)
     awaiting: str | None = None
@@ -37,11 +39,28 @@ class Session:
 _SESSIONS: dict[str, Session] = {}
 
 
-def get_or_create(session_id: str | None) -> Session:
+def get_or_create(
+    session_id: str | None,
+    *,
+    owner_user_id: int | None = None,
+    brand_id: int | None = None,
+) -> Session:
     if session_id and session_id in _SESSIONS:
-        return _SESSIONS[session_id]
+        session = _SESSIONS[session_id]
+        if owner_user_id is not None and session.owner_user_id not in {
+            None,
+            owner_user_id,
+        }:
+            raise PermissionError("Chat session belongs to another user")
+        if brand_id is not None and session.brand_id not in {None, brand_id}:
+            raise PermissionError("Chat session belongs to another brand")
+        # Backfill ownership only for legacy/in-process sessions created before
+        # the caller supplied identity. New API sessions always set both.
+        session.owner_user_id = session.owner_user_id or owner_user_id
+        session.brand_id = session.brand_id or brand_id
+        return session
     sid = session_id or uuid.uuid4().hex[:12]
-    s = Session(id=sid)
+    s = Session(id=sid, owner_user_id=owner_user_id, brand_id=brand_id)
     _SESSIONS[sid] = s
     return s
 

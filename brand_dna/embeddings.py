@@ -1,12 +1,21 @@
 from __future__ import annotations
 
 from pathlib import Path
+from threading import RLock
 from typing import Iterable
 
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 
 from .constants import IMAGE_MODEL_NAME, TEXT_MODEL_NAME
+
+
+# SentenceTransformer construction is comparatively expensive and can also
+# trigger Hugging Face Hub access.  Keep one encoder per model name for the
+# lifetime of this Python process.  RLock makes the first construction atomic,
+# so simultaneous campaign requests cannot load duplicate copies into RAM.
+_ENCODER_CACHE: dict[str, object] = {}
+_ENCODER_CACHE_LOCK = RLock()
 
 
 def validate_embeddings(
@@ -96,30 +105,48 @@ def fold_similarity_features(
     return train_features, validation_features, centroids
 
 
+def _load_encoder(model_name: str, *, purpose: str):
+    with _ENCODER_CACHE_LOCK:
+        cached = _ENCODER_CACHE.get(model_name)
+        if cached is not None:
+            return cached
+
+        try:
+            from sentence_transformers import SentenceTransformer
+        except ImportError as exc:
+            raise RuntimeError(
+                f"sentence-transformers is required for {purpose}. "
+                "Install requirements.txt first."
+            ) from exc
+
+        encoder = SentenceTransformer(model_name)
+        _ENCODER_CACHE[model_name] = encoder
+        return encoder
+
+
+def clear_encoder_cache() -> None:
+    """Forget in-memory encoders.
+
+    Normal application code should not call this: cached models are intended
+    to live until the server process exits.  It exists for tests and for an
+    explicit administrative model reload without restarting Python.
+    """
+
+    with _ENCODER_CACHE_LOCK:
+        _ENCODER_CACHE.clear()
+
+
 def load_text_encoder():
-    try:
-        from sentence_transformers import SentenceTransformer
-    except ImportError as exc:
-        raise RuntimeError(
-            "sentence-transformers is required for new-caption prediction. "
-            "Install requirements.txt first."
-        ) from exc
-    return SentenceTransformer(TEXT_MODEL_NAME)
+    return _load_encoder(TEXT_MODEL_NAME, purpose="new-caption prediction")
 
 
 def load_image_encoder():
-    try:
-        from sentence_transformers import SentenceTransformer
-    except ImportError as exc:
-        raise RuntimeError(
-            "sentence-transformers is required for image prediction. "
-            "Install requirements.txt first."
-        ) from exc
-    return SentenceTransformer(IMAGE_MODEL_NAME)
+    return _load_encoder(IMAGE_MODEL_NAME, purpose="image prediction")
 
 
 def encode_text(text: str, model=None) -> np.ndarray:
-    model = model or load_text_encoder()
+    if model is None:
+        model = load_text_encoder()
     result = model.encode([text], show_progress_bar=False)
     return np.asarray(result[0], dtype=float)
 
@@ -132,7 +159,8 @@ def encode_image(image_path: str | Path, model=None) -> np.ndarray:
         from PIL import Image
     except ImportError as exc:
         raise RuntimeError("Pillow is required to read images.") from exc
-    model = model or load_image_encoder()
+    if model is None:
+        model = load_image_encoder()
     with Image.open(path) as image:
         image = image.convert("RGB")
         result = model.encode(image, show_progress_bar=False)

@@ -3,14 +3,17 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 os.environ.setdefault("DATABASE_URL", f"sqlite:///{ROOT / 'committee_demo.db'}")
 os.environ.setdefault("ADAPTIVE_MEMORY_DB", str(ROOT / "outputs/adaptive_memory/committee_demo.db"))
 
-from database.models import Brand, ContentPlan, Product, User  # noqa: E402
+from database.models import Brand, ContentPlan, GeneratedPost, Product, User  # noqa: E402
 from database.session import SessionLocal, init_db  # noqa: E402
 from workflows.campaign_pipeline import run_campaign_pipeline  # noqa: E402
 
@@ -52,32 +55,48 @@ def seed() -> int:
                 category="Audio",
             )
             db.add(product); db.flush()
-        plan = ContentPlan(
-            user_id=user.id,
-            brand_id=brand.id,
-            campaign_name="عرض اللجنة — Cold Start",
-            days=1,
-            campaign_goal="زيادة المبيعات",
-            campaign_goals=["زيادة المبيعات"],
-            product_ids=[product.id],
-            mode="campaign",
-        )
-        db.add(plan); db.commit(); db.refresh(plan)
+        plan = db.query(ContentPlan).filter(
+            ContentPlan.user_id == user.id,
+            ContentPlan.brand_id == brand.id,
+            ContentPlan.campaign_name == "عرض اللجنة — Cold Start",
+        ).first()
+        if not plan:
+            plan = ContentPlan(
+                user_id=user.id,
+                brand_id=brand.id,
+                campaign_name="عرض اللجنة — Cold Start",
+                days=1,
+                campaign_goal="زيادة المبيعات",
+                campaign_goals=["زيادة المبيعات"],
+                product_ids=[product.id],
+                mode="campaign",
+            )
+            db.add(plan)
+            db.commit()
+            db.refresh(plan)
         return plan.id
 
 
 def main() -> None:
     plan_id = seed()
-    result = run_campaign_pipeline(plan_id, dry_run=True)
+    with SessionLocal() as db:
+        plan = db.query(ContentPlan).filter(ContentPlan.id == plan_id).first()
+        existing_posts = db.query(GeneratedPost).filter(
+            GeneratedPost.content_plan_id == plan_id
+        ).count()
+
+    reused = bool(existing_posts and plan and plan.status in {"done", "done_with_errors"})
+    result = None if reused else run_campaign_pipeline(plan_id, dry_run=True)
     summary = {
-        "success": result.success,
+        "success": True if reused else result.success,
         "plan_id": plan_id,
-        "posts_generated": result.posts_generated,
-        "errors": result.errors,
+        "posts_generated": existing_posts if reused else result.posts_generated,
+        "errors": [] if reused else result.errors,
+        "reused_existing_demo": reused,
         "note": "Dry-run: no Gemini request and no fake probability/SHAP.",
     }
     print(json.dumps(summary, ensure_ascii=False, indent=2))
-    if not result.success:
+    if not summary["success"]:
         raise SystemExit(1)
 
 

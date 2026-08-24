@@ -18,14 +18,14 @@ from sqlalchemy import case, func
 from sqlalchemy.orm import Session
 
 from api.routers.auth import get_current_user
-from database.models import LLMUsageLog, User, ContentPlan
+from database.models import ContentPlan, LLMUsageLog, User, utcnow_naive
 from database.session import get_db
 
 router = APIRouter(prefix="/monitoring", tags=["monitoring"])
 
 
 def _range_start(period: str) -> datetime | None:
-    now = datetime.utcnow()
+    now = utcnow_naive()
     return {
         "today": now - timedelta(days=1),
         "7d": now - timedelta(days=7),
@@ -80,7 +80,7 @@ def get_overview(
     avg_campaign_duration_ms = round(sum(r.duration or 0 for r in campaign_rows) / campaigns_count, 1) if campaigns_count else 0
 
     # اتجاه زمني يومي (آخر 14 يوماً ضمن النطاق)
-    trend_start = _range_start(period) or (datetime.utcnow() - timedelta(days=14))
+    trend_start = _range_start(period) or (utcnow_naive() - timedelta(days=14))
     dialect = db.get_bind().dialect.name
     day_expr = (
         func.strftime("%Y-%m-%d", LLMUsageLog.created_at)

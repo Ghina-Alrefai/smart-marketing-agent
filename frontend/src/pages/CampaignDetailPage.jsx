@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
-import { AlertTriangle, CheckCircle, XCircle, Clock, Loader, Hash, Image, Trash2, CalendarClock, RotateCcw } from 'lucide-react'
+import { AlertTriangle, CheckCircle, XCircle, Loader, Image, Trash2, CalendarClock, RotateCcw } from 'lucide-react'
 import { apiErrorMessage, getPlan, listPosts, approvePost, deletePlan, regeneratePlan } from '../api/client'
 import ImageLightbox from '../components/ImageLightbox'
 
@@ -40,20 +40,21 @@ export default function CampaignDetailPage() {
   const approveMutation = useMutation({
     mutationFn: ({ postId, approved }) => approvePost(postId, approved),
     onSuccess: (_res, { approved }) => {
-      qc.invalidateQueries(['posts', planId])
-      qc.invalidateQueries(['scheduled'])
+      qc.invalidateQueries({ queryKey: ['posts', planId] })
+      qc.invalidateQueries({ queryKey: ['scheduled'] })
       if (approved) toast.success('تم الاعتماد وجُدول تلقائياً على وقت الذروة (8 مساءً) 🗓️')
     },
+    onError: (error) => toast.error(apiErrorMessage(error, 'تعذّر تحديث حالة المنشور')),
   })
 
   const deleteMutation = useMutation({
     mutationFn: () => deletePlan(planId),
     onSuccess: () => {
-      qc.invalidateQueries(['plans'])
+      qc.invalidateQueries({ queryKey: ['plans'] })
       toast.success('تم حذف الحملة')
       navigate('/campaigns')
     },
-    onError: () => toast.error('فشل الحذف'),
+    onError: (error) => toast.error(apiErrorMessage(error, 'فشل حذف الحملة')),
   })
 
   const regenerateMutation = useMutation({
@@ -144,6 +145,21 @@ export default function CampaignDetailPage() {
                 : <RotateCcw size={16} />}
               {regenerateMutation.isPending ? 'جاري بدء المحاولة...' : 'إعادة توليد الحملة'}
             </button>
+          </div>
+        </div>
+      )}
+
+      {plan?.status === 'done_with_errors' && (
+        <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-900 flex items-start gap-3">
+          <AlertTriangle size={20} className="mt-0.5 flex-shrink-0"/>
+          <div>
+            <p className="font-bold">اكتملت الحملة جزئياً</p>
+            <p className="text-sm mt-1 leading-6">
+              تم حفظ المنشورات التي اكتملت بنجاح فقط. راجعها قبل الاعتماد.
+            </p>
+            {plan.error_message && (
+              <p className="text-xs mt-2 text-amber-700 break-words">{plan.error_message}</p>
+            )}
           </div>
         </div>
       )}
@@ -255,6 +271,7 @@ export default function CampaignDetailPage() {
                 <div className="flex flex-col gap-2 flex-shrink-0">
                   <button
                     onClick={() => approveMutation.mutate({ postId: post.id, approved: true })}
+                    disabled={approveMutation.isPending}
                     className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all
                       ${post.approved ? 'bg-emerald-600 text-white' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'}`}
                   >
@@ -263,6 +280,7 @@ export default function CampaignDetailPage() {
                   </button>
                   <button
                     onClick={() => approveMutation.mutate({ postId: post.id, approved: false })}
+                    disabled={approveMutation.isPending}
                     className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all
                       ${!post.approved && post.status === 'rejected' ? 'bg-red-600 text-white' : 'bg-red-50 text-red-600 hover:bg-red-100'}`}
                   >

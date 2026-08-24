@@ -1,7 +1,7 @@
 {
-  "release": "SmartSocial AI Integrated Committee Edition",
-  "version": "1.1.3-integrated",
-  "prepared_at": "2026-08-17",
+  "release": "SmartSocial AI Campaign Recovery Edition",
+  "version": "1.3.2-campaign-recovery",
+  "prepared_at": "2026-08-24",
   "workflow_decision": "The team's agreed workflow remains the only campaign orchestrator; Brand-DNA and Adaptive Memory are integrated behind its generation and evaluation interfaces.",
   "model_scope": {
     "registered_brand_keys": ["al-boraq"],
@@ -13,6 +13,16 @@
     "policy_activation_required": true,
     "automatic_publication": false
   },
+  "policy_lifecycle": {
+    "review_interval_days": 30,
+    "minimum_linked_evaluated_posts": 8,
+    "grace_days": 15,
+    "insufficient_evidence_deferral_days": 14,
+    "max_insufficient_reviews_before_pause": 2,
+    "decisions": ["renew", "modify", "suspend", "expire", "insufficient_evidence"],
+    "policy_ids_traced_into_performance_evidence": true,
+    "replacement_versions_require_human_activation": true
+  },
   "design_generation_guardrails": {
     "single_asset_per_post": true,
     "carousel_cover_only": true,
@@ -21,18 +31,42 @@
     "calm_minimal_composition": true
   },
   "verification": {
-    "core_tests": "15 passed",
-    "python_files_parsed": 102,
+    "automated_tests": "58 passed",
+    "python_files_parsed": 125,
+    "frontend_modules_transformed": 1636,
+    "frontend_page_smoke_renders": 13,
+    "openapi_paths": 49,
+    "openapi_operations": 54,
+    "duplicate_openapi_operation_ids": 0,
     "pdf_pages_visually_verified": 22,
-    "frontend_build_command": "cd frontend && npm ci && npm run build"
+    "frontend_build_command": "cd frontend && npm ci && npm run build",
+    "external_live_calls": "not executed; credentials required (Gemini, Google OAuth, Hugging Face first download, social publishing)"
   },
   "sha256": {
-    "performance_predesign.joblib": "99025e064b999646ff659e2c7e572c705b1876c49d288d10e5e54ba281d514bd",
-    "performance_multimodal.joblib": "362073ea1250207490318d6fe2285dde462f5fffa87ac19e6298fc6c24e03e76",
-    "model_card.json": "cac3e49171c1279a33f2f73e3f5fca0037605e12705a93ac3ee170a4fbb6a5a0",
-    "brand_profile.json": "dcfc9ab58d54e58cc1e4b2e3064699ace79a7f797b5e6fad1a82c3e39d46f95e",
-    "full_workflow.html": "6eee8e30ec80691df581c3b8633e8b62fd434d7fb49da6c6ecde753657dfde0e",
-    "SmartSocial_AI_Committee_Guide_AR.pdf": "7cdd38b8e5709c8c41147b2f46c7c63eae806c39a6b2bc6d3fd5982f7606b676"
+    "artifacts/performance_predesign.joblib": "99025e064b999646ff659e2c7e572c705b1876c49d288d10e5e54ba281d514bd",
+    "artifacts/performance_multimodal.joblib": "362073ea1250207490318d6fe2285dde462f5fffa87ac19e6298fc6c24e03e76",
+    "artifacts/model_card.json": "cac3e49171c1279a33f2f73e3f5fca0037605e12705a93ac3ee170a4fbb6a5a0",
+    "artifacts/brand_profile.json": "dcfc9ab58d54e58cc1e4b2e3064699ace79a7f797b5e6fad1a82c3e39d46f95e",
+    "docs/full_workflow.html": "6eee8e30ec80691df581c3b8633e8b62fd434d7fb49da6c6ecde753657dfde0e",
+    "output/pdf/SmartSocial_AI_Committee_Guide_AR.pdf": "7cdd38b8e5709c8c41147b2f46c7c63eae806c39a6b2bc6d3fd5982f7606b676",
+    "main.py": "df340204d53b46ab8fe4c7196e0be144d4661eccfad40b477ae55909de92d2bb",
+    "requirements.txt": "9db4efc80ee739f7e99ae4bf6f4124d9e96c36b3c4c2536b32bd2bf3de794c21",
+    "frontend/package-lock.json": "8da87b7ff3ce9b7fb938cd6597a30c5441c6202754566c0d348ea0bb97471abf",
+    "frontend/dist/index.html": "cca09a4b4d4f94606c0d788bba0fdcba2563ab5d8d802372246d9658ee513423",
+    "frontend/dist/assets/index-CnUKRtsr.css": "918f4385d6ce7401c28f193194cac54451aff8cc16ff8dfb83beab23bbf5f8a7",
+    "frontend/dist/assets/index-BGuv_dzs.js": "e7c1c72b72fa5ce6383d52d088dd580a67deec92c52617d2fa544bb0c54d4ae7",
+    "docs/QA_REPORT_v1.3.2.md": "569cd2dbd143e69ddbc2554a2f19745b43dff02d3c3e47df09ee908a2e6e37cb",
+    "docs/RELEASE_NOTES_v1.3.2_AR.md": "f1b8cd5c2ec7cd24d526f652bbd7aebdc62953e3e107aefdbb16b8c5c27edcae",
+    "scripts/verify_release.py": "d614358af69a945c7a0596f45d97f5d40e364f426abd4c083f25129f53335922",
+    "services/llm_service.py": "cfd88f787db969e96e36d7c68fcd10e587147888d503881c486b51f764ccbedf",
+    "agents/strategy/strategy_agent.py": "a86dd1fb7636f5c08111c69117bb6750235d427fa7533079be9f9cc2bd7e2a56",
+    "agents/idea/idea_agent.py": "dfba31609953841fcbb42664b899b6f546baf55b88f34f7401aea1c9dafd4bc7",
+    "workflows/campaign_pipeline.py": "54d9769dcc0e1b62cabc06519d7603ec520bd57f3723b358bdd6f93bcb9147d7",
+    "api/routers/plans.py": "62dd178cbbcf2fc2eb7c6e2241d8b080d84b2f78383a71af8db42e115c10238d",
+    "database/models.py": "8df7c05b2bccfb9bf470a942fe3a31c1e0d38dc50b6a003344a537a46fb2fe1d",
+    "frontend/src/pages/CampaignDetailPage.jsx": "89b2313edd4df45333227043e11a6ec004f035630f249cc948ac1a4f221fad73",
+    "tests/test_campaign_failure_recovery.py": "d9e43b103d8974548edf72958bd0ab7c16216853e28efe7a2d860231c5a3e11a",
+    "tests/test_api_security.py": "28f30f2aaee34e70701360a07ecc45e59c44f6881838c28f12c80ba6b25b1c92"
   },
   "scientific_limits": [
     "The included page model uses 50 historical posts.",

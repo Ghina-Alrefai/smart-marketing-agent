@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { Sparkles, Package, Megaphone, ChevronLeft, TrendingUp } from 'lucide-react'
+import { Sparkles, Package, Megaphone, ChevronLeft } from 'lucide-react'
 import useStore from '../store'
 import { listPlans, listProducts, listBrands } from '../api/client'
 

@@ -106,6 +106,8 @@ class PolicyGenerator:
             conditions=insight.context_conditions,
             source_insight_id=insight.id,
             confidence_0_1=confidence,
+            recommendation=insight.recommendation,
+            source_support_count=insight.support_count,
             priority=priority,
             # Adaptive performance policies never become hard guardrails automatically.
             is_hard_constraint=False,

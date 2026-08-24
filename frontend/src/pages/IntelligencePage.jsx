@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import {
-  Activity, AlertTriangle, BrainCircuit, CheckCircle2, ChevronDown, ChevronUp,
-  Database, Eye, FlaskConical, LockKeyhole, RefreshCw, ShieldCheck, Sparkles,
+  Activity, AlertTriangle, BrainCircuit, CalendarClock, CheckCircle2, ChevronDown, ChevronUp,
+  Database, Eye, FlaskConical, History, LockKeyhole, RefreshCw, ShieldCheck, Sparkles,
 } from 'lucide-react'
 import useStore from '../store'
 import {
@@ -15,6 +15,9 @@ import {
   initializeIntelligence,
   listBrands,
   listMemoryPolicies,
+  listMemoryPolicyReviews,
+  reviewDueMemoryPolicies,
+  reviewMemoryPolicy,
 } from '../api/client'
 
 const STATUS_STYLE = {
@@ -34,8 +37,31 @@ const POLICY_STATUS_LABELS = {
   draft: 'مسودة بانتظار المراجعة',
   active: 'نشطة',
   paused: 'متوقفة مؤقتاً',
+  expired: 'منتهية الصلاحية',
   deprecated: 'قديمة',
   rejected: 'مرفوضة',
+}
+
+const REVIEW_DECISION_LABELS = {
+  renew: 'تم التجديد',
+  modify: 'يلزم إصدار معدل',
+  suspend: 'تم الإيقاف المؤقت',
+  expire: 'تم إنهاء السياسة',
+  insufficient_evidence: 'بانتظار أدلة كافية',
+}
+
+function policyStatusStyle(status) {
+  if (status === 'active') return 'bg-emerald-50 text-emerald-700'
+  if (status === 'expired' || status === 'rejected') return 'bg-red-50 text-red-700'
+  if (status === 'paused') return 'bg-orange-50 text-orange-700'
+  if (status === 'deprecated') return 'bg-gray-100 text-gray-600'
+  return 'bg-amber-50 text-amber-700'
+}
+
+function formatDate(value) {
+  if (!value) return '—'
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString('ar')
 }
 
 const FEATURE_LABELS = {
@@ -156,10 +182,16 @@ export default function IntelligencePage() {
     queryFn: () => listMemoryPolicies(activeBrandId).then(r => r.data),
     enabled: !!activeBrandId,
   })
+  const { data: policyReviews = [] } = useQuery({
+    queryKey: ['memory-policy-reviews', activeBrandId],
+    queryFn: () => listMemoryPolicyReviews(activeBrandId).then(r => r.data),
+    enabled: !!activeBrandId,
+  })
 
   const refresh = () => {
     qc.invalidateQueries({ queryKey: ['intelligence-status', activeBrandId] })
     qc.invalidateQueries({ queryKey: ['memory-policies', activeBrandId] })
+    qc.invalidateQueries({ queryKey: ['memory-policy-reviews', activeBrandId] })
     qc.invalidateQueries({ queryKey: ['brands', user?.id] })
   }
   const useAction = (fn, success) => useMutation({
@@ -175,6 +207,15 @@ export default function IntelligencePage() {
     ({ id }) => activateMemoryPolicy(id, user?.email || `user-${user?.id || 'unknown'}`),
     'تم تفعيل السياسة بموافقة بشرية',
   )
+  const reviewerId = user?.email || `user-${user?.id || 'unknown'}`
+  const reviewDue = useAction(
+    () => reviewDueMemoryPolicies(activeBrandId, reviewerId),
+    'اكتملت مراجعة السياسات المستحقة',
+  )
+  const reviewOne = useAction(
+    ({ id }) => reviewMemoryPolicy(id, reviewerId, true),
+    'اكتملت مراجعة السياسة وحُفظ القرار',
+  )
 
   useEffect(() => {
     setOpenPolicyId(null)
@@ -187,11 +228,23 @@ export default function IntelligencePage() {
     if (approved) activate.mutate({ id: policy.id })
   }
 
+  const reviewPolicyNow = (policy) => {
+    const approved = window.confirm(
+      `سيعيد النظام تقييم الإصدار ${policy.version} من خلال المنشورات المرتبطة به فعلياً. هل تريد المتابعة؟`,
+    )
+    if (approved) reviewOne.mutate({ id: policy.id })
+  }
+
   if (!user) return <div className="p-8 text-gray-500">أنشئ مستخدماً أولاً من الإعدادات.</div>
   if (!brands.length) return <div className="p-8 text-gray-500">أضف براند أولاً لتهيئة Brand DNA.</div>
 
   const model = status?.model_card || {}
   const memory = status?.memory || {}
+  const policyHealth = memory.policy_health || {}
+  const latestReviewByPolicy = {}
+  policyReviews.forEach(review => {
+    if (!latestReviewByPolicy[review.policy_id]) latestReviewByPolicy[review.policy_id] = review
+  })
 
   return (
     <div className="p-8 max-w-6xl mx-auto space-y-6">
@@ -238,11 +291,12 @@ export default function IntelligencePage() {
           )}
         </div>
 
-        <div className="grid md:grid-cols-4 gap-4">
+        <div className="grid md:grid-cols-2 xl:grid-cols-5 gap-4">
           <Metric label="منشورات التدريب" value={status.dna_training_post_count || 0} note="خاصة بالصفحة" icon={Database}/>
           <Metric label="ROC-AUC قبل التصميم" value={model.predesign_cv_metrics ? Number(model.predesign_cv_metrics.roc_auc).toFixed(3) : '—'} note="إشارة ترتيب لا ضمان" icon={Activity}/>
           <Metric label="الأدلة" value={memory.evidence_count || 0} note="خاصة بهذا البراند" icon={FlaskConical}/>
           <Metric label="السياسات النشطة" value={memory.active_policy_count || 0} note="بعد اعتماد بشري" icon={ShieldCheck}/>
+          <Metric label="مراجعات مستحقة" value={policyHealth.due_policy_count || 0} note="كل 30 يوماً مع أدلة كافية" icon={CalendarClock}/>
         </div>
 
         <div className="grid lg:grid-cols-2 gap-6">
@@ -274,18 +328,28 @@ export default function IntelligencePage() {
         </div>
 
         <div className="card">
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h3 className="font-bold text-gray-900">سياسات الذاكرة</h3>
               <p className="text-xs text-gray-500 mt-1">فعّل المسودة فقط بعد مراجعة مصدرها وشروطها.</p>
             </div>
-            <span className="text-xs bg-gray-100 text-gray-600 px-2.5 py-1 rounded-full">{policies.length} سياسة</span>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs bg-gray-100 text-gray-600 px-2.5 py-1 rounded-full">{policies.length} سياسة</span>
+              <button
+                className="btn-secondary text-sm flex items-center gap-1.5"
+                onClick={() => reviewDue.mutate()}
+                disabled={reviewDue.isPending}
+              >
+                <CalendarClock size={15}/> مراجعة السياسات المستحقة
+              </button>
+            </div>
           </div>
           <div className="mt-4 space-y-3">
             {!policies.length && <p className="text-sm text-gray-400 py-5 text-center">لا توجد سياسات بعد.</p>}
             {policies.map(policy => {
               const isOpen = openPolicyId === policy.id
               const panelId = `policy-details-${policy.id}`
+              const latestReview = latestReviewByPolicy[policy.id]
               return (
                 <div key={policy.id} className={`border rounded-xl overflow-hidden transition-colors ${isOpen ? 'border-primary-200 bg-primary-50/20' : 'border-gray-100 bg-white'}`}>
                   <button
@@ -299,11 +363,11 @@ export default function IntelligencePage() {
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="font-semibold text-sm text-gray-900">{AGENT_LABELS[policy.target_agent] || policy.target_agent}</span>
                         <span className="text-xs font-mono text-gray-400" dir="ltr">{policy.target_agent}</span>
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${policy.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${policyStatusStyle(policy.status)}`}>
                           {POLICY_STATUS_LABELS[policy.status] || policy.status}
                         </span>
                       </div>
-                      <p className="text-xs text-gray-500 mt-1">الإصدار {policy.version} · {policy.rules.length} قواعد · {policy.source_insight_ids.length} مصادر</p>
+                      <p className="text-xs text-gray-500 mt-1">الإصدار {policy.version} · {policy.rules.length} قواعد · {policy.source_insight_ids.length} مصادر · المراجعة التالية {formatDate(policy.next_review_at)}</p>
                     </div>
                     <span className="flex items-center gap-2 text-sm font-semibold text-primary-700">
                       <Eye size={16}/> {isOpen ? 'إخفاء التفاصيل' : 'عرض القواعد ومراجعتها'}
@@ -317,6 +381,38 @@ export default function IntelligencePage() {
                         <Eye size={17} className="mt-0.5 flex-shrink-0"/>
                         <p>راجع كل قاعدة ومصدرها. القواعد أدناه توصيات تشغيلية مرنة، ولا تتجاوز هوية البراند أو موجز الحملة.</p>
                       </div>
+
+                      <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-3 text-sm">
+                        <div className="rounded-xl border border-gray-200 bg-white p-3">
+                          <p className="text-xs font-semibold text-gray-400">بدأ التطبيق</p>
+                          <p className="mt-1 text-gray-800">{formatDate(policy.valid_from)}</p>
+                        </div>
+                        <div className="rounded-xl border border-gray-200 bg-white p-3">
+                          <p className="text-xs font-semibold text-gray-400">المراجعة التالية</p>
+                          <p className="mt-1 text-gray-800">{formatDate(policy.next_review_at)}</p>
+                        </div>
+                        <div className="rounded-xl border border-gray-200 bg-white p-3">
+                          <p className="text-xs font-semibold text-gray-400">آخر حد للصلاحية</p>
+                          <p className="mt-1 text-gray-800">{formatDate(policy.valid_until)}</p>
+                        </div>
+                        <div className="rounded-xl border border-gray-200 bg-white p-3">
+                          <p className="text-xs font-semibold text-gray-400">الحد الأدنى للمراجعة</p>
+                          <p className="mt-1 text-gray-800">{policy.minimum_review_posts || policyHealth.minimum_evaluated_posts || 8} منشورات مرتبطة</p>
+                        </div>
+                      </div>
+
+                      {latestReview && (
+                        <div className="rounded-xl bg-violet-50 border border-violet-100 p-3 text-sm text-violet-900 flex items-start gap-2">
+                          <History size={17} className="mt-0.5 flex-shrink-0"/>
+                          <div>
+                            <p className="font-semibold">آخر قرار: {REVIEW_DECISION_LABELS[latestReview.decision] || latestReview.decision}</p>
+                            <p className="text-xs mt-1">
+                              {latestReview.evaluated_post_count} منشورات مرتبطة · نجاح {latestReview.success_rate_0_1 == null ? 'غير متاح' : `${Math.round(latestReview.success_rate_0_1 * 100)}٪`} · {formatDate(latestReview.reviewed_at)}
+                            </p>
+                            {!!latestReview.reasons?.length && <p className="text-xs mt-1 text-violet-700">{latestReview.reasons.join(' ')}</p>}
+                          </div>
+                        </div>
+                      )}
 
                       <div className="space-y-3">
                         {(policy.rules || []).map((rule, index) => (
@@ -368,13 +464,33 @@ export default function IntelligencePage() {
                       )}
 
                       {policy.status === 'active' && (
-                        <div className="rounded-xl bg-emerald-50 border border-emerald-100 p-3 text-sm text-emerald-800 flex items-start gap-2">
-                          <CheckCircle2 size={17} className="mt-0.5 flex-shrink-0"/>
+                        <div className="rounded-xl bg-emerald-50 border border-emerald-100 p-3 text-sm text-emerald-800 flex flex-wrap items-center justify-between gap-3">
+                          <div className="flex items-start gap-2">
+                            <CheckCircle2 size={17} className="mt-0.5 flex-shrink-0"/>
+                            <div>
+                              <p className="font-semibold">هذه السياسة معتمدة ونشطة حالياً، وليست دائمة.</p>
+                              {(policy.approved_by || policy.approved_at) && (
+                                <p className="text-xs mt-1">اعتمدها {policy.approved_by || 'مستخدم مخوّل'}{policy.approved_at ? ` بتاريخ ${formatDate(policy.approved_at)}` : ''}.</p>
+                              )}
+                            </div>
+                          </div>
+                          <button
+                            className="btn-secondary text-sm flex items-center gap-1.5"
+                            onClick={() => reviewPolicyNow(policy)}
+                            disabled={reviewOne.isPending}
+                          >
+                            <RefreshCw size={15}/> مراجعة الآن
+                          </button>
+                        </div>
+                      )}
+
+                      {(policy.status === 'paused' || policy.status === 'expired') && (
+                        <div className="rounded-xl bg-orange-50 border border-orange-100 p-3 text-sm text-orange-800 flex items-start gap-2">
+                          <AlertTriangle size={17} className="mt-0.5 flex-shrink-0"/>
                           <div>
-                            <p className="font-semibold">هذه السياسة معتمدة ونشطة حالياً.</p>
-                            {(policy.approved_by || policy.approved_at) && (
-                              <p className="text-xs mt-1">اعتمدها {policy.approved_by || 'مستخدم مخوّل'}{policy.approved_at ? ` بتاريخ ${new Date(policy.approved_at).toLocaleString('ar')}` : ''}.</p>
-                            )}
+                            <p className="font-semibold">هذه السياسة لا تُرسل إلى الوكلاء حالياً.</p>
+                            {policy.last_review_reason && <p className="text-xs mt-1">{policy.last_review_reason}</p>}
+                            {policy.replacement_policy_id && <p className="text-xs mt-1 font-mono" dir="ltr">replacement: {policy.replacement_policy_id}</p>}
                           </div>
                         </div>
                       )}

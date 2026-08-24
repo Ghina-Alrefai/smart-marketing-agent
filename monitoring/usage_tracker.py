@@ -19,9 +19,9 @@ from __future__ import annotations
 import time
 from contextlib import contextmanager
 from contextvars import ContextVar
-from datetime import datetime
 from uuid import uuid4
 
+from database.models import utcnow_naive
 from monitoring.pricing import calculate_cost
 
 # سياق التتبّع الحالي (trace_id, user_id, content_plan_id) — يُضبط من نقطة
@@ -104,7 +104,7 @@ def track_llm_call(model_name: str, agent_name: str | None = None):
         content_plan_id=_current_content_plan_id.get(),
     )
     start = time.perf_counter()
-    started_at = datetime.utcnow()
+    started_at = utcnow_naive()
 
     try:
         yield usage
@@ -152,7 +152,7 @@ class _PendingUsage:
 
     def finalize(self, started_at, duration_ms, status, error_type=None) -> None:
         self.started_at = started_at
-        self.completed_at = datetime.utcnow()
+        self.completed_at = utcnow_naive()
         self.duration_ms = duration_ms
         self.status = status
         self.error_type = error_type

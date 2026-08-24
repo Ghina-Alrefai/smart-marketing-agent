@@ -53,7 +53,7 @@ function Section({ id, open, onToggle, title, icon: Icon, children }) {
 }
 
 export default function BrandPage() {
-  const { user, setActiveBrandId } = useStore()
+  const { user, activeBrandId, setActiveBrandId } = useStore()
   const qc = useQueryClient()
 
   const [activeBrand, setActiveBrand]   = useState(null)
@@ -81,10 +81,14 @@ export default function BrandPage() {
   const designExamples = examples.filter(e=>e.example_type==='design')
 
   useEffect(() => {
-    if (brands.length > 0 && !activeBrand) { setActiveBrand(brands[0]); setForm(brandToForm(brands[0])) }
-  }, [brands])
+    if (!brands.length || activeBrand || showAdd) return
+    const initialBrand = brands.find((brand) => brand.id === activeBrandId) || brands[0]
+    setActiveBrand(initialBrand)
+    setActiveBrandId(initialBrand.id)
+    setForm(brandToForm(initialBrand))
+  }, [brands, activeBrand, activeBrandId, setActiveBrandId, showAdd])
 
-  const select = (b) => { setActiveBrand(b); setForm(brandToForm(b)); setShowAdd(false); setTemplateFile(null); setTemplatePreview(null) }
+  const select = (b) => { setActiveBrand(b); setActiveBrandId(b.id); setForm(brandToForm(b)); setShowAdd(false); setTemplateFile(null); setTemplatePreview(null) }
   const toggle = (field, val) => setForm(f => ({ ...f, [field]: f[field].includes(val) ? f[field].filter(v=>v!==val) : [...f[field],val] }))
   const toggleSection = (id) => setOpenSection(s => s===id ? null : id)
 
@@ -93,6 +97,10 @@ export default function BrandPage() {
     setTemplateFile(file)
     setTemplatePreview(URL.createObjectURL(file))
   }
+
+  useEffect(() => () => {
+    if (templatePreview?.startsWith('blob:')) URL.revokeObjectURL(templatePreview)
+  }, [templatePreview])
 
   const saveMutation = useMutation({
     mutationFn: async (data) => {
@@ -122,14 +130,18 @@ export default function BrandPage() {
     },
     onSuccess: (brand) => {
       setActiveBrandId(brand.id); setActiveBrand(brand)
-      qc.invalidateQueries(['brands']); setShowAdd(false); setTemplateFile(null)
+      qc.invalidateQueries({ queryKey: ['brands'] }); setShowAdd(false); setTemplateFile(null)
       toast.success('تم حفظ البراند ✅')
     },
     onError: (error) => {
       if (error.brandWasSaved) {
         setActiveBrandId(error.brandWasSaved.id)
         setActiveBrand(error.brandWasSaved)
-        qc.invalidateQueries(['brands'])
+        setForm(brandToForm(error.brandWasSaved))
+        setShowAdd(false)
+        setTemplateFile(null)
+        setTemplatePreview(null)
+        qc.invalidateQueries({ queryKey: ['brands'] })
       }
       console.error('[Brand save failed]', {
         status: error.response?.status,
@@ -143,18 +155,20 @@ export default function BrandPage() {
 
   const addTextMutation = useMutation({
     mutationFn: () => addBrandExample(activeBrand.id, { example_type:'post', content:newTextEx }),
-    onSuccess: () => { qc.invalidateQueries(['brand-examples', activeBrand.id]); setNewTextEx('') },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['brand-examples', activeBrand.id] }); setNewTextEx('') },
+    onError: (error) => toast.error(apiErrorMessage(error, 'تعذّر إضافة المثال النصي')),
   })
 
   const uploadDesignMutation = useMutation({
     mutationFn: async (files) => { for (const f of files) await uploadDesignExample(activeBrand.id, f) },
-    onSuccess: () => { qc.invalidateQueries(['brand-examples', activeBrand.id]); setDesignFiles([]); toast.success('تم رفع التصاميم ✅') },
-    onError: () => toast.error('فشل الرفع'),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['brand-examples', activeBrand.id] }); setDesignFiles([]); toast.success('تم رفع التصاميم ✅') },
+    onError: (error) => toast.error(apiErrorMessage(error, 'فشل رفع التصاميم')),
   })
 
   const delExMutation = useMutation({
     mutationFn: deleteExample,
-    onSuccess: () => qc.invalidateQueries(['brand-examples', activeBrand?.id]),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['brand-examples', activeBrand?.id] }),
+    onError: (error) => toast.error(apiErrorMessage(error, 'تعذّر حذف المثال')),
   })
 
   const currentTemplate = templatePreview || activeBrand?.template_url || null

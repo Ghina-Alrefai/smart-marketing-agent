@@ -1,5 +1,5 @@
 import axios from 'axios'
-import useStore from '../store'
+import useStore from '../store/index.js'
 
 const api = axios.create({ baseURL: '/api/v1', headers: { 'Content-Type': 'application/json' } })
 
@@ -122,6 +122,12 @@ export const generateMemoryPolicies = (brandId) => api.post(`/intelligence/brand
 export const listMemoryPolicies = (brandId) => api.get(`/intelligence/brands/${brandId}/policies`)
 export const activateMemoryPolicy = (policyId, approvedBy) =>
   api.post(`/intelligence/policies/${policyId}/activate`, { approved_by: approvedBy })
+export const reviewDueMemoryPolicies = (brandId, reviewedBy) =>
+  api.post(`/intelligence/brands/${brandId}/review-policies`, { reviewed_by: reviewedBy })
+export const reviewMemoryPolicy = (policyId, reviewedBy, force = true) =>
+  api.post(`/intelligence/policies/${policyId}/review`, { reviewed_by: reviewedBy, force })
+export const listMemoryPolicyReviews = (brandId, limit = 100) =>
+  api.get(`/intelligence/brands/${brandId}/policy-reviews`, { params: { limit } })
 export const submitPostPerformance = (postId, data) =>
   api.post(`/intelligence/posts/${postId}/performance`, data)
 

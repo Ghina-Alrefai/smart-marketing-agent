@@ -12,8 +12,10 @@ import numpy as np
 import pandas as pd
 import shap
 import sklearn
+from dotenv import load_dotenv
 
 from adaptive_memory.services import MemoryService
+from config import settings
 
 from .adaptive_memory import build_runtime_evidence
 from .embeddings import rebuild_embeddings
@@ -27,6 +29,12 @@ from .predictor import (
     rank_candidates,
     write_prediction,
 )
+
+
+# BaseSettings reads .env into its own settings object but does not export
+# arbitrary values such as BRAND_ID to os.environ. Load it explicitly before
+# argparse defaults are evaluated so direct CLI use matches the application.
+load_dotenv()
 
 
 def _json_file(path: str | Path):
@@ -214,7 +222,7 @@ def build_parser() -> argparse.ArgumentParser:
     generate.add_argument("--output", required=True)
     generate.add_argument(
         "--memory-db",
-        default=os.getenv("ADAPTIVE_MEMORY_DB"),
+        default=os.getenv("ADAPTIVE_MEMORY_DB", settings.ADAPTIVE_MEMORY_DB),
         help="Adaptive Memory SQLite DB containing explicitly activated policies.",
     )
     generate.add_argument("--brand-id", default=os.getenv("BRAND_ID"))
@@ -236,7 +244,7 @@ def build_parser() -> argparse.ArgumentParser:
     design.add_argument("--output", required=True)
     design.add_argument(
         "--memory-db",
-        default=os.getenv("ADAPTIVE_MEMORY_DB"),
+        default=os.getenv("ADAPTIVE_MEMORY_DB", settings.ADAPTIVE_MEMORY_DB),
         help="Adaptive Memory SQLite DB containing explicitly activated policies.",
     )
     design.add_argument("--brand-id", default=os.getenv("BRAND_ID"))

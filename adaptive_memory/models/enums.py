@@ -26,5 +26,22 @@ class PolicyStatus(str, Enum):
     DRAFT = "draft"
     ACTIVE = "active"
     PAUSED = "paused"
+    EXPIRED = "expired"
     DEPRECATED = "deprecated"
     REJECTED = "rejected"
+
+
+class PolicyReviewDecision(str, Enum):
+    """Auditable outcomes produced by the policy health reviewer."""
+
+    RENEW = "renew"
+    MODIFY = "modify"
+    SUSPEND = "suspend"
+    EXPIRE = "expire"
+    INSUFFICIENT_EVIDENCE = "insufficient_evidence"
+
+
+class PolicyReviewTrigger(str, Enum):
+    SCHEDULED = "scheduled"
+    MANUAL = "manual"
+    EVENT_DRIVEN = "event_driven"

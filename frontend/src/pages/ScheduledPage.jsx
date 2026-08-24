@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { CalendarClock, Trash2, Clock, ImageIcon, Pencil, Check, X } from 'lucide-react'
 import useStore from '../store'
-import { listScheduled, deleteScheduled, updateScheduledTime } from '../api/client'
+import { apiErrorMessage, listScheduled, deleteScheduled, updateScheduledTime } from '../api/client'
 import ImageLightbox from '../components/ImageLightbox'
 
 function formatWhen(sp) {
@@ -27,7 +27,7 @@ function toLocalInput(iso) {
 
 export default function ScheduledPage() {
   const { user } = useStore()
-  const userId = user?.id ?? 1
+  const userId = user?.id
   const qc = useQueryClient()
   const [zoom, setZoom] = useState(null)
   const [editing, setEditing] = useState({ id: null, value: '' })
@@ -40,18 +40,18 @@ export default function ScheduledPage() {
 
   const cancelMutation = useMutation({
     mutationFn: deleteScheduled,
-    onSuccess: () => { qc.invalidateQueries(['scheduled']); toast.success('تم إلغاء الجدولة') },
-    onError: () => toast.error('حدث خطأ'),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['scheduled'] }); toast.success('تم إلغاء الجدولة') },
+    onError: (error) => toast.error(apiErrorMessage(error, 'تعذّر إلغاء الجدولة')),
   })
 
   const timeMutation = useMutation({
     mutationFn: ({ id, value }) => updateScheduledTime(id, new Date(value).toISOString()),
     onSuccess: () => {
-      qc.invalidateQueries(['scheduled'])
+      qc.invalidateQueries({ queryKey: ['scheduled'] })
       setEditing({ id: null, value: '' })
       toast.success('تم تعديل الوقت')
     },
-    onError: () => toast.error('تعذّر تعديل الوقت'),
+    onError: (error) => toast.error(apiErrorMessage(error, 'تعذّر تعديل الوقت')),
   })
 
   return (

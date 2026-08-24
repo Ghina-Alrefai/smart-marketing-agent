@@ -65,6 +65,12 @@ def _rule_classify(message: str) -> str:
 
 def classify_intent(message: str, use_llm: bool = True) -> tuple[str, str]:
     """يرجع (intent, method) حيث method ∈ {"llm","rule"}."""
+    # Explicit action phrases are deterministic and should not pay a network
+    # round trip before the same rules are used as fallback.  Keep LLM
+    # classification for ambiguous/unknown language where it can add value.
+    rule_intent = _rule_classify(message)
+    if rule_intent not in {"UNKNOWN", "GREETING"}:
+        return rule_intent, "rule"
     if use_llm:
         try:
             from services.llm_service import call_llm_json
@@ -75,4 +81,4 @@ def classify_intent(message: str, use_llm: bool = True) -> tuple[str, str]:
                 return intent, "llm"
         except Exception:  # noqa: BLE001
             pass
-    return _rule_classify(message), "rule"
+    return rule_intent, "rule"

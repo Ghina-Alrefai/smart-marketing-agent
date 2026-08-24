@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import sqlite3
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Iterable
 
@@ -12,6 +12,7 @@ from adaptive_memory.models import (
     Insight,
     InsightStatus,
     Policy,
+    PolicyReview,
     PolicyStatus,
 )
 
@@ -88,6 +89,20 @@ class SQLiteStorage(MemoryStorage):
 
                 CREATE INDEX IF NOT EXISTS idx_policies_brand_agent
                     ON policies (brand_id, target_agent, status);
+
+                CREATE TABLE IF NOT EXISTS policy_reviews (
+                    id TEXT PRIMARY KEY,
+                    policy_id TEXT NOT NULL,
+                    brand_id TEXT NOT NULL,
+                    decision TEXT NOT NULL,
+                    reviewed_at TEXT NOT NULL,
+                    data TEXT NOT NULL
+                );
+
+                CREATE INDEX IF NOT EXISTS idx_policy_reviews_policy
+                    ON policy_reviews (policy_id, reviewed_at DESC);
+                CREATE INDEX IF NOT EXISTS idx_policy_reviews_brand
+                    ON policy_reviews (brand_id, reviewed_at DESC);
                 """
             )
 
@@ -296,7 +311,15 @@ class SQLiteStorage(MemoryStorage):
             ).fetchone()
         return int(row["max_version"]) + 1
 
-    def activate_policy(self, policy_id: str, approved_by: str) -> Policy:
+    def activate_policy(
+        self,
+        policy_id: str,
+        approved_by: str,
+        *,
+        review_interval_days: int = 30,
+        review_grace_days: int = 15,
+        minimum_review_posts: int = 8,
+    ) -> Policy:
         if not approved_by.strip():
             raise ValueError("approved_by must be a non-empty human/system identifier")
         target = self.get_policy(policy_id)
@@ -308,11 +331,23 @@ class SQLiteStorage(MemoryStorage):
             )
 
         now = datetime.now(timezone.utc)
+        next_review_at = now + timedelta(days=review_interval_days)
         active = target.model_copy(
             update={
                 "status": PolicyStatus.ACTIVE,
                 "approved_by": approved_by.strip(),
                 "approved_at": now,
+                "valid_from": now,
+                "next_review_at": next_review_at,
+                "valid_until": next_review_at + timedelta(days=review_grace_days),
+                "last_review_at": None,
+                "review_interval_days": review_interval_days,
+                "review_grace_days": review_grace_days,
+                "minimum_review_posts": minimum_review_posts,
+                "insufficient_review_count": 0,
+                "last_review_decision": None,
+                "last_review_reason": None,
+                "expiration_reason": None,
                 "updated_at": now,
             }
         )
@@ -362,8 +397,53 @@ class SQLiteStorage(MemoryStorage):
             )
         return active
 
+    def save_policy_review(self, review: PolicyReview) -> str:
+        with self._connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO policy_reviews (
+                    id, policy_id, brand_id, decision, reviewed_at, data
+                ) VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    review.id,
+                    review.policy_id,
+                    review.brand_id,
+                    review.decision.value,
+                    review.reviewed_at.isoformat(),
+                    review.model_dump_json(),
+                ),
+            )
+        return review.id
+
+    def list_policy_reviews(
+        self,
+        *,
+        brand_id: str | None = None,
+        policy_id: str | None = None,
+        limit: int | None = None,
+    ) -> list[PolicyReview]:
+        query = "SELECT data FROM policy_reviews"
+        conditions: list[str] = []
+        params: list[object] = []
+        if brand_id is not None:
+            conditions.append("brand_id = ?")
+            params.append(brand_id)
+        if policy_id is not None:
+            conditions.append("policy_id = ?")
+            params.append(policy_id)
+        if conditions:
+            query += " WHERE " + " AND ".join(conditions)
+        query += " ORDER BY reviewed_at DESC, id DESC"
+        if limit is not None:
+            query += " LIMIT ?"
+            params.append(max(0, int(limit)))
+        with self._connect() as conn:
+            rows = conn.execute(query, params).fetchall()
+        return [PolicyReview.model_validate_json(row["data"]) for row in rows]
+
     def stats(self) -> dict[str, int]:
-        tables = ["evidence_events", "insights", "policies"]
+        tables = ["evidence_events", "insights", "policies", "policy_reviews"]
         output: dict[str, int] = {}
         with self._connect() as conn:
             for table in tables:

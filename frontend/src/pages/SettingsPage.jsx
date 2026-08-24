@@ -1,7 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { User, ShieldCheck, LogOut, Mail, BadgeCheck } from 'lucide-react'
 import useStore from '../store'
-import { apiErrorMessage, createUser } from '../api/client'
 
 export default function SettingsPage() {
   const navigate = useNavigate()

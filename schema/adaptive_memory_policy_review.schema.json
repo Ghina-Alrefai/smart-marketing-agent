@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Adaptive Memory Policy Review",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id", "policy_id", "family_id", "policy_version", "brand_id",
+    "target_agent", "trigger", "decision", "reviewed_by", "reviewed_at",
+    "evidence_window_start", "evidence_window_end", "minimum_required_posts",
+    "linked_evidence_count", "evaluated_post_count", "success_count",
+    "failure_count", "previous_mean_rule_confidence_0_1"
+  ],
+  "properties": {
+    "id": {"type": "string"},
+    "policy_id": {"type": "string"},
+    "family_id": {"type": "string"},
+    "policy_version": {"type": "integer", "minimum": 1},
+    "brand_id": {"type": "string"},
+    "target_agent": {
+      "enum": ["CAMPAIGN_AGENT", "COPYWRITER_AGENT", "DESIGNER_AGENT", "SCHEDULER_AGENT"]
+    },
+    "trigger": {"enum": ["scheduled", "manual", "event_driven"]},
+    "decision": {"enum": ["renew", "modify", "suspend", "expire", "insufficient_evidence"]},
+    "reviewed_by": {"type": "string"},
+    "reviewed_at": {"type": "string", "format": "date-time"},
+    "evidence_window_start": {"type": "string", "format": "date-time"},
+    "evidence_window_end": {"type": "string", "format": "date-time"},
+    "minimum_required_posts": {"type": "integer", "minimum": 1},
+    "linked_evidence_count": {"type": "integer", "minimum": 0},
+    "evaluated_post_count": {"type": "integer", "minimum": 0},
+    "success_count": {"type": "integer", "minimum": 0},
+    "failure_count": {"type": "integer", "minimum": 0},
+    "success_rate_0_1": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+    "baseline_success_rate_0_1": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+    "success_rate_delta": {"type": ["number", "null"]},
+    "mean_relative_performance_index": {"type": ["number", "null"]},
+    "previous_mean_rule_confidence_0_1": {"type": "number", "minimum": 0, "maximum": 1},
+    "rule_metrics": {"type": "array", "items": {"type": "object"}},
+    "reasons": {"type": "array", "items": {"type": "string"}},
+    "replacement_policy_id": {"type": ["string", "null"]}
+  }
+}

@@ -42,6 +42,7 @@ def build_runtime_evidence(
     observation_window: str = "24h",
     observed_at: datetime | None = None,
     success_only: bool = False,
+    applied_policy_ids: list[str] | None = None,
 ) -> dict[str, Any] | None:
     """Build the versioned public contract sent from Brand-DNA to Adaptive Memory.
 
@@ -63,6 +64,13 @@ def build_runtime_evidence(
     grouped = group_attributions_by_agent(attributions)
     post_id = str(prediction.get("post_id") or "unknown-post")
     model_version = str(prediction.get("model_version") or "unknown-model")
+    evidence_context = _context_from_attributions(attributions)
+    if applied_policy_ids:
+        # This explicit trace is what lets the monthly reviewer count only posts
+        # that actually received the policy during generation.
+        evidence_context["applied_policy_ids"] = list(
+            dict.fromkeys(str(item) for item in applied_policy_ids if str(item))
+        )
 
     return {
         "schema_version": "brand-dna-am-evidence-v1",
@@ -83,7 +91,7 @@ def build_runtime_evidence(
         "page_id": page_id,
         "post_id": post_id,
         "campaign_id": campaign_id,
-        "context": _context_from_attributions(attributions),
+        "context": evidence_context,
         "brand_profile_version": prediction.get("brand_profile_version"),
         "model_version": model_version,
         "explainer_version": "shap-linear-independent-runtime-v2",

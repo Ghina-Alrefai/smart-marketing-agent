@@ -30,7 +30,7 @@ export default function CampaignsPage() {
   const deleteMutation = useMutation({
     mutationFn: deletePlan,
     onSuccess: () => {
-      qc.invalidateQueries(['plans'])
+      qc.invalidateQueries({ queryKey: ['plans'] })
       toast.success('تم حذف الحملة')
     },
     onError: () => toast.error('فشل الحذف، حاولي مجدداً'),

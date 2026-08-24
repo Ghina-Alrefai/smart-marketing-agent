@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { Send, Bot, User, Sparkles, Image as ImageIcon, FileText, RotateCcw, History, MessageSquare, Plus, Trash2 } from 'lucide-react'
 import clsx from 'clsx'
 import useStore from '../store'
-import { sendChatMessage } from '../api/client'
+import { apiErrorMessage, listBrands, sendChatMessage } from '../api/client'
 import ImageLightbox from '../components/ImageLightbox'
 
 const EXAMPLES = [
@@ -94,17 +95,28 @@ function ResultCard({ data, onZoom }) {
 
 export default function ChatPage() {
   const {
-    user, activeBrandId,
+    user, activeBrandId, setActiveBrandId,
     conversations, activeId,
     newConversation, switchConversation, deleteConversation,
+    ensureConversationBrand,
     updateActiveMessages: setMessages, setActiveSessionId: setSessionId,
   } = useStore()
-  const userId = user?.id ?? 1
-  const brandId = activeBrandId ?? 1
+  const userId = user?.id
+
+  const { data: brands = [], isLoading: brandsLoading } = useQuery({
+    queryKey: ['brands', userId],
+    queryFn: () => listBrands(userId).then((response) => response.data),
+    enabled: !!userId,
+  })
+
+  const brandId = brands.some((brand) => brand.id === activeBrandId)
+    ? activeBrandId
+    : brands[0]?.id
 
   const active = conversations.find(c => c.id === activeId) || conversations[0]
   const messages = active?.messages || []
   const sessionId = active?.sessionId || null
+  const conversationReady = !!brandId && active?.brandId === brandId
 
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -114,11 +126,16 @@ export default function ChatPage() {
   const endRef = useRef(null)
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages, loading])
+  useEffect(() => {
+    if (!brandId) return
+    if (activeBrandId !== brandId) setActiveBrandId(brandId)
+    ensureConversationBrand(brandId)
+  }, [activeBrandId, brandId, ensureConversationBrand, setActiveBrandId])
 
   // text = القيمة المُرسَلة للخادم · displayText = ما يظهر في فقاعة المستخدم
   async function send(text, displayText) {
     const msg = (text ?? input).trim()
-    if (!msg || loading) return
+    if (!msg || loading || !userId || !brandId || !conversationReady) return
     setInput('')
     setMessages(m => [...m, { role: 'user', text: displayText ?? msg }])
     setLoading(true)
@@ -133,7 +150,7 @@ export default function ChatPage() {
         options: data.options, data: data.data,
       }])
     } catch (e) {
-      setMessages(m => [...m, { role: 'agent', text: '❌ تعذّر الاتصال بالخادم. تأكد أن الـ backend يعمل على المنفذ 8000.' }])
+      setMessages(m => [...m, { role: 'agent', text: `❌ ${apiErrorMessage(e, 'تعذّر الاتصال بالخادم')}` }])
     } finally {
       setLoading(false)
     }
@@ -153,10 +170,20 @@ export default function ChatPage() {
           </div>
           <div>
             <h1 className="font-bold text-gray-900">المساعد الذكي</h1>
-            <p className="text-xs text-gray-400">فيسبوك · user #{userId} · brand #{brandId}</p>
+            <p className="text-xs text-gray-400">فيسبوك · user #{userId || '—'} · brand #{brandId || '—'}</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
+          {brands.length > 0 && (
+            <select
+              className="input !w-auto !py-1.5 text-xs"
+              value={brandId || ''}
+              onChange={(event) => setActiveBrandId(Number(event.target.value))}
+              aria-label="اختيار البراند للمحادثة"
+            >
+              {brands.map((brand) => <option key={brand.id} value={brand.id}>{brand.brand_name}</option>)}
+            </select>
+          )}
           {/* قائمة سجل المحادثات */}
           <div className="relative">
             <button onClick={() => setShowConvos(s => !s)}
@@ -250,10 +277,15 @@ export default function ChatPage() {
       {/* Composer */}
       <div className="border-t border-gray-100 bg-white px-4 md:px-8 py-4">
         <div className="max-w-2xl mx-auto">
+          {!brandsLoading && brands.length === 0 && (
+            <p className="mb-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+              أضف برانداً أولاً من صفحة «البراند» حتى يستطيع المساعد استخدام الهوية الصحيحة.
+            </p>
+          )}
           {messages.length <= 1 && (
             <div className="flex flex-wrap gap-2 mb-3">
               {EXAMPLES.map((ex, i) => (
-                <button key={i} onClick={() => send(ex)}
+                <button key={i} onClick={() => send(ex)} disabled={!conversationReady}
                   className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-full px-3 py-1.5 transition-colors">
                   {ex}
                 </button>
@@ -269,7 +301,7 @@ export default function ChatPage() {
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }}
             />
-            <button onClick={() => send()} disabled={loading || !input.trim()}
+            <button onClick={() => send()} disabled={loading || !input.trim() || !conversationReady}
               className="btn-primary flex items-center justify-center w-11 h-11 !p-0 flex-shrink-0 disabled:opacity-40">
               <Send size={18} />
             </button>

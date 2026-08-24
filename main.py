@@ -1,6 +1,7 @@
 """
 AI Marketing OS — FastAPI Application Entry Point
 """
+import asyncio
 import logging
 from pathlib import Path
 from time import perf_counter
@@ -11,6 +12,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.routing import Match
 
 from config import settings
 from logging_config import (
@@ -55,7 +57,7 @@ seed_admin()   # يهيّئ حساب المشرف الثابت إن لم يكن 
 app = FastAPI(
     title="AI Marketing OS",
     description="نظام تشغيل تسويقي مبني على الذكاء الاصطناعي",
-    version="1.2.0-merged",
+    version="1.3.2-campaign-recovery",
 )
 
 
@@ -86,6 +88,9 @@ async def request_logging(request: Request, call_next):
 
         duration_ms = (perf_counter() - started_at) * 1000
         response.headers["X-Request-ID"] = request_id
+        # Uploaded assets are deliberately restricted to decoded raster images.
+        # Keep browsers from second-guessing their server-selected MIME type.
+        response.headers["X-Content-Type-Options"] = "nosniff"
         log_level = (
             logging.ERROR if response.status_code >= 500
             else logging.WARNING if response.status_code >= 400
@@ -142,21 +147,104 @@ app.mount("/uploads", StaticFiles(directory=str(uploads_path)), name="uploads")
 # ── Routers ────────────────────────────────────────────────────────────────
 app.include_router(auth.router, prefix="/api/v1")
 _authenticated = [Depends(get_current_user)]
-app.include_router(users.router, prefix="/api/v1", dependencies=_authenticated)
-app.include_router(brands.router, prefix="/api/v1", dependencies=_authenticated)
-app.include_router(products.router, prefix="/api/v1", dependencies=_authenticated)
-app.include_router(plans.router, prefix="/api/v1", dependencies=_authenticated)
-app.include_router(chat.router, prefix="/api/v1", dependencies=_authenticated)
-app.include_router(scheduled.router, prefix="/api/v1", dependencies=_authenticated)
-app.include_router(events.router, prefix="/api/v1", dependencies=_authenticated)
-app.include_router(intelligence.router, prefix="/api/v1", dependencies=_authenticated)
+_protected_api_routers = (
+    users.router,
+    brands.router,
+    products.router,
+    plans.router,
+    chat.router,
+    scheduled.router,
+    events.router,
+    intelligence.router,
+)
+for protected_router in _protected_api_routers:
+    app.include_router(
+        protected_router,
+        prefix="/api/v1",
+        dependencies=_authenticated,
+    )
 app.include_router(monitoring.router, prefix="/api/v1")
+_all_api_routers = (auth.router, *_protected_api_routers, monitoring.router)
+
+
+_API_FALLBACK_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"]
+
+
+@app.api_route("/api", methods=_API_FALLBACK_METHODS, include_in_schema=False)
+@app.api_route("/api/{api_path:path}", methods=_API_FALLBACK_METHODS, include_in_schema=False)
+async def api_not_found(request: Request, api_path: str = "") -> JSONResponse:
+    """Keep unknown/wrong-method API requests out of the React SPA fallback."""
+    allowed_methods: set[str] = set()
+    api_scope = dict(request.scope)
+    if request.url.path.startswith("/api/v1"):
+        api_scope["path"] = request.url.path[len("/api/v1"):] or "/"
+        for router in _all_api_routers:
+            for route in router.routes:
+                match, _ = route.matches(api_scope)
+                if match is Match.PARTIAL:
+                    allowed_methods.update(getattr(route, "methods", set()) or set())
+
+    if allowed_methods:
+        allow = ", ".join(sorted(allowed_methods))
+        return JSONResponse(
+            status_code=405,
+            content={"detail": "Method Not Allowed"},
+            headers={"Allow": allow},
+        )
+    return JSONResponse(status_code=404, content={"detail": "API endpoint not found"})
+
+
+def _preload_brand_dna_runtime() -> None:
+    """Warm immutable model artifacts and encoders once for this API process."""
+    from brand_dna.embeddings import load_image_encoder, load_text_encoder
+    from brand_dna.paths import project_root
+    from brand_dna.predictor import load_bundle
+
+    root = project_root()
+    load_bundle("predesign", root)
+    load_bundle("multimodal", root)
+    load_text_encoder()
+    load_image_encoder()
+
+
+@app.on_event("startup")
+async def startup_brand_dna_runtime() -> None:
+    if not settings.BRAND_DNA_PRELOAD_MODELS:
+        logger.info("brand_dna.runtime_preload_disabled")
+        return
+
+    started_at = perf_counter()
+    try:
+        # Loading is blocking CPU/disk work. Keep it outside the event-loop
+        # thread while still delaying readiness until the runtime is warm.
+        await asyncio.to_thread(_preload_brand_dna_runtime)
+    except Exception as exc:  # The API can still serve cold-start brands.
+        logger.warning(
+            "brand_dna.runtime_preload_failed error_type=%s error=%s",
+            type(exc).__name__,
+            str(exc)[:1000],
+        )
+        return
+
+    logger.info(
+        "brand_dna.runtime_preload_completed duration_ms=%.1f",
+        (perf_counter() - started_at) * 1000,
+    )
+
+
+@app.on_event("startup")
+async def startup_policy_review() -> None:
+    from services.policy_review_scheduler import start_policy_review_scheduler
+
+    start_policy_review_scheduler()
 
 
 @app.on_event("shutdown")
-def shutdown_intelligence() -> None:
+async def shutdown_intelligence() -> None:
     from services.brand_intelligence_service import close_memory_service
+    from services.policy_review_scheduler import stop_policy_review_scheduler
 
+    await stop_policy_review_scheduler()
     close_memory_service()
 
 # ── Serve React frontend build ─────────────────────────────────────────────

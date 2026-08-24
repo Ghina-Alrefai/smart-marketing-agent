@@ -5,7 +5,14 @@ from typing import Iterable
 
 from smart_social_contracts import AgentType
 
-from adaptive_memory.models import EvidenceEvent, Insight, InsightStatus, Policy, PolicyStatus
+from adaptive_memory.models import (
+    EvidenceEvent,
+    Insight,
+    InsightStatus,
+    Policy,
+    PolicyReview,
+    PolicyStatus,
+)
 
 
 class MemoryStorage(ABC):
@@ -71,7 +78,29 @@ class MemoryStorage(ABC):
         pass
 
     @abstractmethod
-    def activate_policy(self, policy_id: str, approved_by: str) -> Policy:
+    def activate_policy(
+        self,
+        policy_id: str,
+        approved_by: str,
+        *,
+        review_interval_days: int = 30,
+        review_grace_days: int = 15,
+        minimum_review_posts: int = 8,
+    ) -> Policy:
+        pass
+
+    @abstractmethod
+    def save_policy_review(self, review: PolicyReview) -> str:
+        pass
+
+    @abstractmethod
+    def list_policy_reviews(
+        self,
+        *,
+        brand_id: str | None = None,
+        policy_id: str | None = None,
+        limit: int | None = None,
+    ) -> list[PolicyReview]:
         pass
 
     @abstractmethod

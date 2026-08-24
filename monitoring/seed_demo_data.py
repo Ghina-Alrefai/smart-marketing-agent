@@ -20,7 +20,7 @@ from datetime import datetime, timedelta
 if sys.platform == "win32":
     sys.stdout.reconfigure(encoding="utf-8")
 
-from database.models import Brand, ContentPlan, LLMUsageLog, User
+from database.models import Brand, ContentPlan, LLMUsageLog, User, utcnow_naive
 from database.session import SessionLocal, init_db
 from monitoring.pricing import calculate_cost
 
@@ -73,7 +73,7 @@ def _make_log(*, trace_id, user_id, content_plan_id, agent_name, model_name, cre
 
 def seed(db, *, user_id: int, content_plan_ids: list[int], days_back: int = 30) -> int:
     """يولّد سجلات موزّعة على `days_back` يوماً الماضية، عبر حملات متعددة."""
-    now = datetime.utcnow()
+    now = utcnow_naive()
     rows: list[LLMUsageLog] = []
 
     for day_offset in range(days_back, -1, -1):
@@ -124,7 +124,7 @@ def _ensure_demo_campaign(db) -> tuple[int, list[int]]:
         plan = ContentPlan(
             user_id=user.id, brand_id=brand.id,
             campaign_name=f"حملة تجريبية #{i}", days=7, status="done",
-            created_at=datetime.utcnow() - timedelta(days=30 - i * 7),
+            created_at=utcnow_naive() - timedelta(days=30 - i * 7),
         )
         db.add(plan)
         demo_plans.append(plan)

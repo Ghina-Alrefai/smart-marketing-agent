@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from threading import RLock
 from typing import Any, Mapping
 
 import joblib
@@ -19,8 +20,17 @@ from .features import (
 from .paths import project_root, resolve_project_path
 
 
+# Bundles contain the fitted preprocessor/classifier and SHAP background.  A
+# cheap file signature check on every access lets normal inference reuse them,
+# while automatically refreshing the cache if a retraining run replaces an
+# artifact in the same server process.
+_BundleSignature = tuple[int, int, int, int, int]
+_BUNDLE_CACHE: dict[Path, tuple[_BundleSignature, dict[str, Any]]] = {}
+_BUNDLE_CACHE_LOCK = RLock()
+
+
 def bundle_path(mode: str, root: Path | None = None) -> Path:
-    root = root or project_root()
+    root = project_root() if root is None else root
     if mode == "predesign":
         return root / "artifacts" / "performance_predesign.joblib"
     if mode == "multimodal":
@@ -28,11 +38,18 @@ def bundle_path(mode: str, root: Path | None = None) -> Path:
     raise ValueError("mode must be 'predesign' or 'multimodal'.")
 
 
-def load_bundle(mode: str, root: Path | None = None) -> dict[str, Any]:
-    path = bundle_path(mode, root)
-    if not path.exists():
-        raise FileNotFoundError(f"Model artifact is missing: {path}. Run `brand-dna train`.")
-    bundle = joblib.load(path)
+def _bundle_signature(path: Path) -> _BundleSignature:
+    stat = path.stat()
+    return (
+        stat.st_dev,
+        stat.st_ino,
+        stat.st_size,
+        stat.st_mtime_ns,
+        stat.st_ctime_ns,
+    )
+
+
+def _validate_bundle_version(bundle: dict[str, Any]) -> None:
     artifact_version = bundle.get("created_with", {}).get("scikit_learn")
     if artifact_version != sklearn.__version__:
         raise RuntimeError(
@@ -40,7 +57,53 @@ def load_bundle(mode: str, root: Path | None = None) -> dict[str, Any]:
             f"{artifact_version}, but runtime has {sklearn.__version__}. "
             "Install the exact version from requirements.txt or retrain locally."
         )
-    return bundle
+
+
+def clear_bundle_cache(
+    mode: str | None = None,
+    root: Path | None = None,
+) -> None:
+    """Forget one cached artifact, or all artifacts when ``mode`` is omitted.
+
+    This is primarily a test/administrative hook.  Regular retraining does not
+    need it because :func:`load_bundle` notices changed artifact metadata.
+    """
+
+    with _BUNDLE_CACHE_LOCK:
+        if mode is None:
+            _BUNDLE_CACHE.clear()
+            return
+        path = bundle_path(mode, root).resolve()
+        _BUNDLE_CACHE.pop(path, None)
+
+
+def load_bundle(mode: str, root: Path | None = None) -> dict[str, Any]:
+    path = bundle_path(mode, root).resolve()
+    with _BUNDLE_CACHE_LOCK:
+        try:
+            signature = _bundle_signature(path)
+        except FileNotFoundError as exc:
+            _BUNDLE_CACHE.pop(path, None)
+            raise FileNotFoundError(
+                f"Model artifact is missing: {path}. Run `brand-dna train`."
+            ) from exc
+
+        cached = _BUNDLE_CACHE.get(path)
+        if cached is not None and cached[0] == signature:
+            return cached[1]
+
+        bundle = joblib.load(path)
+        _validate_bundle_version(bundle)
+
+        # Do not cache a bundle if its file changed while joblib was reading it.
+        # The next request will retry after the training/write operation ends.
+        if _bundle_signature(path) != signature:
+            raise RuntimeError(
+                f"Model artifact changed while it was being loaded: {path}. Retry the request."
+            )
+
+        _BUNDLE_CACHE[path] = (signature, bundle)
+        return bundle
 
 
 def predict_candidate(
@@ -53,8 +116,9 @@ def predict_candidate(
     text_model=None,
     image_model=None,
 ) -> dict[str, Any]:
-    root = root or project_root()
-    bundle = bundle or load_bundle(mode, root)
+    root = project_root() if root is None else root
+    if bundle is None:
+        bundle = load_bundle(mode, root)
 
     if mode == "multimodal" and precomputed_image_embedding is None:
         image_path_value = str(candidate.get("image_path") or candidate.get("Image Path") or "").strip()
@@ -143,7 +207,7 @@ def rank_candidates(
     mode: str,
     root: Path | None = None,
 ) -> list[dict[str, Any]]:
-    root = root or project_root()
+    root = project_root() if root is None else root
     bundle = load_bundle(mode, root)
     # Load each encoder only once for the entire ranking batch.
     text_model = load_text_encoder()
@@ -173,7 +237,7 @@ def predict_historical_post(
 ) -> dict[str, Any]:
     import pandas as pd
 
-    root = root or project_root()
+    root = project_root() if root is None else root
     df = pd.read_csv(root / "data" / "processed" / "posts.csv").head(50)
     matches = df[df["Post ID"] == post_id]
     if matches.empty:

@@ -15,6 +15,7 @@ from typing import Any
 
 from brand_dna.generation import generate_candidates, generate_design_prompt
 from config import settings
+from database.models import utcnow_naive
 from services.brand_intelligence_service import (
     get_brand_context,
     memory_service,
@@ -50,7 +51,7 @@ def build_candidate_brief(
     start_date: datetime | None,
 ) -> dict[str, Any]:
     """Translate the team's idea object into the locked prediction contract."""
-    publish_day = (start_date or datetime.utcnow()) + timedelta(days=max(index - 1, 0))
+    publish_day = (start_date or utcnow_naive()) + timedelta(days=max(index - 1, 0))
     language = (brand_guide.get("language") or "ar").lower()
     return {
         "campaign_goal": campaign_goals[0] if campaign_goals else "زيادة المبيعات",
@@ -149,13 +150,25 @@ def _hashtags(text: str, expected: int) -> list[str]:
     return found[: max(expected, 0)]
 
 
-def _policy_ids(generation: dict[str, Any]) -> list[str]:
+def _policy_ids(
+    generation: dict[str, Any], design: dict[str, Any] | None = None
+) -> list[str]:
     ids: list[str] = []
-    for context in (generation.get("adaptive_memory_context") or {}).values():
+
+    def collect(context: dict[str, Any]) -> None:
         for rule in context.get("rules") or []:
             policy_id = rule.get("policy_id")
             if policy_id and policy_id not in ids:
                 ids.append(policy_id)
+
+    for context in (generation.get("adaptive_memory_context") or {}).values():
+        collect(context)
+    design_context = (
+        ((design or {}).get("design_trace") or {}).get("adaptive_memory_context")
+        or {}
+    )
+    if isinstance(design_context, dict):
+        collect(design_context)
     return ids
 
 
@@ -378,7 +391,7 @@ def generate_evaluated_post(
                 recommended.get("model_version")
                 or (multimodal or {}).get("model_version")
             ),
-            "memory_policy_ids": _policy_ids(generation),
+            "memory_policy_ids": _policy_ids(generation, design),
             "generation_trace_id": trace_id,
             "generation_trace": generation,
             "brief": brief,

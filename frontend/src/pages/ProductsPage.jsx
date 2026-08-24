@@ -1,9 +1,16 @@
-import { useState, useRef } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { Plus, Trash2, Package, Upload, ImageIcon, FileSpreadsheet, Images } from 'lucide-react'
 import useStore from '../store'
-import { createProduct, listProducts, deleteProduct, uploadProductImage, bulkUploadProducts } from '../api/client'
+import {
+  apiErrorMessage,
+  createProduct,
+  listProducts,
+  deleteProduct,
+  uploadProductImage,
+  bulkUploadProducts,
+} from '../api/client'
 
 const emptyForm = { title: '', description: '', price: '', category: '' }
 
@@ -24,39 +31,57 @@ export default function ProductsPage() {
 
   const addMutation = useMutation({
     mutationFn: async (data) => {
+      if (!user?.id) throw new Error('لا توجد جلسة مستخدم صالحة')
       const res = await createProduct(user.id, {
         ...data,
         price: data.price ? parseFloat(data.price) : null,
       })
+      const product = res.data
       if (imageFile) {
-        await uploadProductImage(res.data.id, imageFile)
+        try {
+          await uploadProductImage(product.id, imageFile)
+        } catch (error) {
+          error.productWasSaved = product
+          throw error
+        }
       }
-      return res
+      return product
     },
     onSuccess: () => {
-      qc.invalidateQueries(['products'])
+      qc.invalidateQueries({ queryKey: ['products'] })
       setForm(emptyForm)
       setImageFile(null)
       setImagePreview(null)
       setShowForm(false)
       toast.success('تم إضافة المنتج ✅')
     },
-    onError: () => toast.error('حدث خطأ'),
+    onError: (error) => {
+      if (error.productWasSaved) {
+        qc.invalidateQueries({ queryKey: ['products'] })
+        setForm(emptyForm)
+        setImageFile(null)
+        setImagePreview(null)
+        setShowForm(false)
+      }
+      const prefix = error.productWasSaved ? 'تم حفظ المنتج، لكن فشل رفع صورته: ' : ''
+      toast.error(`${prefix}${apiErrorMessage(error)}`, { duration: 8000 })
+    },
   })
 
   const deleteMutation = useMutation({
     mutationFn: deleteProduct,
-    onSuccess: () => { qc.invalidateQueries(['products']); toast.success('تم حذف المنتج') },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['products'] }); toast.success('تم حذف المنتج') },
+    onError: (error) => toast.error(apiErrorMessage(error, 'تعذّر حذف المنتج')),
   })
 
   const excelMutation = useMutation({
     mutationFn: (file) => bulkUploadProducts(user.id, file).then(r => r.data),
     onSuccess: (data) => {
-      qc.invalidateQueries(['products'])
+      qc.invalidateQueries({ queryKey: ['products'] })
       if (data.created > 0) toast.success(data.message)
       else toast.error(data.errors?.[0] || 'لم تتم إضافة أي منتج')
     },
-    onError: (e) => toast.error(e?.response?.data?.detail || 'تعذّر رفع الملف'),
+    onError: (error) => toast.error(apiErrorMessage(error, 'تعذّر رفع الملف')),
   })
 
   const handleExcelChange = (e) => {
@@ -70,6 +95,14 @@ export default function ProductsPage() {
     if (!file) return
     setImageFile(file)
     setImagePreview(URL.createObjectURL(file))
+  }
+
+  useEffect(() => () => {
+    if (imagePreview?.startsWith('blob:')) URL.revokeObjectURL(imagePreview)
+  }, [imagePreview])
+
+  const handleDelete = (product) => {
+    if (window.confirm(`هل تريد حذف «${product.title}»؟`)) deleteMutation.mutate(product.id)
   }
 
   return (
@@ -182,7 +215,8 @@ export default function ProductsPage() {
                   {product.category && <p className="text-xs text-gray-400 mt-0.5">{product.category}</p>}
                 </div>
                 <button
-                  onClick={() => deleteMutation.mutate(product.id)}
+                  onClick={() => handleDelete(product)}
+                  disabled={deleteMutation.isPending}
                   className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 transition-all mr-1 flex-shrink-0"
                 >
                   <Trash2 size={16} />

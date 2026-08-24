@@ -10,6 +10,22 @@
       "title": "AgentType",
       "type": "string"
     },
+    "PolicyReviewDecision": {
+      "enum": [
+        "renew",
+        "modify",
+        "suspend",
+        "expire",
+        "insufficient_evidence"
+      ],
+      "title": "PolicyReviewDecision",
+      "type": "string"
+    },
+    "Recommendation": {
+      "enum": ["prefer", "avoid", "monitor"],
+      "title": "Recommendation",
+      "type": "string"
+    },
     "PolicyRule": {
       "additionalProperties": false,
       "properties": {
@@ -44,6 +60,19 @@
           "title": "Confidence 0 1",
           "type": "number"
         },
+        "recommendation": {
+          "anyOf": [
+            {"$ref": "#/$defs/Recommendation"},
+            {"type": "null"}
+          ],
+          "default": null
+        },
+        "source_support_count": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Source Support Count",
+          "type": "integer"
+        },
         "priority": {
           "maximum": 5,
           "minimum": 1,
@@ -71,6 +100,7 @@
         "draft",
         "active",
         "paused",
+        "expired",
         "deprecated",
         "rejected"
       ],
@@ -83,6 +113,11 @@
     "id": {
       "title": "Id",
       "type": "string"
+    },
+    "family_id": {
+      "anyOf": [{"type": "string"}, {"type": "null"}],
+      "default": null,
+      "title": "Family Id"
     },
     "brand_id": {
       "title": "Brand Id",
@@ -143,6 +178,65 @@
       ],
       "default": null,
       "title": "Approved At"
+    },
+    "supersedes_policy_id": {
+      "anyOf": [{"type": "string"}, {"type": "null"}],
+      "default": null
+    },
+    "replacement_policy_id": {
+      "anyOf": [{"type": "string"}, {"type": "null"}],
+      "default": null
+    },
+    "valid_from": {
+      "anyOf": [{"format": "date-time", "type": "string"}, {"type": "null"}],
+      "default": null
+    },
+    "valid_until": {
+      "anyOf": [{"format": "date-time", "type": "string"}, {"type": "null"}],
+      "default": null
+    },
+    "next_review_at": {
+      "anyOf": [{"format": "date-time", "type": "string"}, {"type": "null"}],
+      "default": null
+    },
+    "last_review_at": {
+      "anyOf": [{"format": "date-time", "type": "string"}, {"type": "null"}],
+      "default": null
+    },
+    "review_interval_days": {
+      "default": 30,
+      "minimum": 1,
+      "type": "integer"
+    },
+    "review_grace_days": {
+      "default": 15,
+      "minimum": 0,
+      "type": "integer"
+    },
+    "minimum_review_posts": {
+      "default": 8,
+      "minimum": 1,
+      "type": "integer"
+    },
+    "insufficient_review_count": {
+      "default": 0,
+      "minimum": 0,
+      "type": "integer"
+    },
+    "last_review_decision": {
+      "anyOf": [
+        {"$ref": "#/$defs/PolicyReviewDecision"},
+        {"type": "null"}
+      ],
+      "default": null
+    },
+    "last_review_reason": {
+      "anyOf": [{"type": "string"}, {"type": "null"}],
+      "default": null
+    },
+    "expiration_reason": {
+      "anyOf": [{"type": "string"}, {"type": "null"}],
+      "default": null
     },
     "created_at": {
       "format": "date-time",

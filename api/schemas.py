@@ -204,3 +204,28 @@ class PolicyActivationCreate(BaseModel):
         if not value:
             raise ValueError("approved_by is required")
         return value
+
+
+class PolicyReviewCreate(BaseModel):
+    reviewed_by: str
+    force: bool = True
+
+    @field_validator("reviewed_by")
+    @classmethod
+    def _reviewed_by_required(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("reviewed_by is required")
+        return value
+
+
+class PolicyReviewBatchCreate(BaseModel):
+    reviewed_by: str
+
+    @field_validator("reviewed_by")
+    @classmethod
+    def _batch_reviewer_required(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("reviewed_by is required")
+        return value
