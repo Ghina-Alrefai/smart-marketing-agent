@@ -110,6 +110,9 @@ class Product(Base):
     created_at = Column(DateTime, default=utcnow_naive)
 
     user = relationship("User", back_populates="products")
+    posts = relationship(
+        "ProductPost", back_populates="product", cascade="all, delete-orphan"
+    )
 
 
 class ContentPlan(Base):
@@ -282,3 +285,33 @@ class ScheduledPost(Base):
         String(50), default="scheduled"
     )  # scheduled | published | cancelled
     created_at = Column(DateTime, default=utcnow_naive)
+
+
+class ProductPost(Base):
+    """منشور مرجعي ثابت مرتبط بمنتج — مكتبة محتوى جاهزة للاستخدام لاحقاً.
+
+    خلافاً لـ GeneratedPost، لا يتبع هذا المنشور أي حملة (ContentPlan)؛ فهو
+    محتوى مُعدّ مسبقاً يُخزَّن مرة واحدة ويُعاد استخدامه في الحملات أو الجدولة.
+    """
+
+    __tablename__ = "product_posts"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    product_id = Column(Integer, ForeignKey("products.id"), nullable=False, index=True)
+    source_ref = Column(String(50))          # رقم المنتج في ملف الاستيراد (1..N)
+    post_type = Column(String(100))
+    post_goal = Column(String(200))
+    hook = Column(Text)
+    caption = Column(Text)
+    cta = Column(Text)
+    hashtags = Column(JSON, default=list)
+    image_prompt = Column(Text)
+    image_url = Column(String(500))
+    language = Column(String(20), default="ar")
+    notes = Column(Text)
+    status = Column(String(50), default="ready")   # ready | archived
+    created_at = Column(DateTime, default=utcnow_naive)
+    updated_at = Column(DateTime, default=utcnow_naive, onupdate=utcnow_naive)
+
+    user = relationship("User")
+    product = relationship("Product", back_populates="posts")

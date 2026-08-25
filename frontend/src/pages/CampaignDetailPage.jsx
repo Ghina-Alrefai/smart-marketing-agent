@@ -5,10 +5,37 @@ import toast from 'react-hot-toast'
 import { AlertTriangle, CheckCircle, XCircle, Loader, Image, Trash2, CalendarClock, RotateCcw } from 'lucide-react'
 import { apiErrorMessage, getPlan, listPosts, approvePost, deletePlan, regeneratePlan } from '../api/client'
 import ImageLightbox from '../components/ImageLightbox'
+import CampaignPipeline from '../components/CampaignPipeline'
 
 function formatWhen(iso) {
   try { return new Date(iso).toLocaleString('ar', { dateStyle: 'medium', timeStyle: 'short' }) }
   catch { return iso }
+}
+
+// الهوك يُعرض بخط عريض فوق النص، والكابشن غالباً يبدأ بنفسه — نحذف التكرار
+// حتى لا تظهر الجملة الافتتاحية مرتين (عريضة ثم عادية).
+function captionWithoutHook(caption, hook) {
+  const body = (caption || '').trim()
+  const head = (hook || '').trim()
+  if (!body || !head) return body
+  const norm = s => s.replace(/\s+/g, ' ').trim()
+  if (norm(body).startsWith(norm(head))) {
+    // نقصّ بمقارنة تدريجية لتجاوز فروق المسافات/الأسطر
+    let i = 0, j = 0
+    while (i < body.length && j < head.length) {
+      if (/\s/.test(body[i]) && /\s/.test(head[j])) {
+        while (i < body.length && /\s/.test(body[i])) i++
+        while (j < head.length && /\s/.test(head[j])) j++
+        continue
+      }
+      if (body[i] !== head[j]) break
+      i++; j++
+    }
+    if (j >= head.length) {
+      return body.slice(i).replace(/^[\s‏‎:،.-]+/, '').trim()
+    }
+  }
+  return body
 }
 
 const STATUS_BADGE = {
@@ -113,6 +140,18 @@ export default function CampaignDetailPage() {
           </div>
         </div>
 
+        {/* خط أنابيب الوكلاء — يظهر أثناء التوليد وعند الفشل */}
+        {(isGenerating || plan?.status === 'failed') && (
+          <div className="mt-5">
+            <CampaignPipeline
+              stage={plan?.current_stage}
+              status={plan?.status}
+              errorMessage={plan?.error_message}
+              postsGenerated={posts.length}
+            />
+          </div>
+        )}
+
         {/* Progress bar */}
         {posts.length > 0 && (
           <div className="mt-4 p-4 bg-gray-50 rounded-xl">
@@ -127,25 +166,20 @@ export default function CampaignDetailPage() {
         )}
       </div>
 
+      {/* تفاصيل الفشل معروضة على العقدة المتعطّلة في خط الأنابيب أعلاه */}
       {plan?.status === 'failed' && (
-        <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-red-800 flex items-start gap-3">
-          <AlertTriangle size={20} className="mt-0.5 flex-shrink-0"/>
-          <div className="flex-1">
-            <p className="font-bold">فشل توليد الحملة</p>
-            <p className="text-sm mt-1 leading-6">{plan.error_message || 'لم يُحفظ سبب الفشل في هذا التشغيل القديم. أعد المحاولة بعد تحديث النسخة لالتقاط التفاصيل.'}</p>
-            {plan.current_stage && <p className="text-xs mt-2 text-red-600">آخر مرحلة: {plan.current_stage}</p>}
-            <button
-              type="button"
-              onClick={handleRegenerate}
-              disabled={regenerateMutation.isPending}
-              className="mt-4 inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {regenerateMutation.isPending
-                ? <Loader size={16} className="animate-spin" />
-                : <RotateCcw size={16} />}
-              {regenerateMutation.isPending ? 'جاري بدء المحاولة...' : 'إعادة توليد الحملة'}
-            </button>
-          </div>
+        <div className="mb-6 flex justify-center">
+          <button
+            type="button"
+            onClick={handleRegenerate}
+            disabled={regenerateMutation.isPending}
+            className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {regenerateMutation.isPending
+              ? <Loader size={16} className="animate-spin" />
+              : <RotateCcw size={16} />}
+            {regenerateMutation.isPending ? 'جاري بدء المحاولة...' : 'إعادة توليد الحملة'}
+          </button>
         </div>
       )}
 
@@ -240,9 +274,11 @@ export default function CampaignDetailPage() {
                     <p className="font-bold text-gray-900 text-sm mb-1">🎯 {post.hook}</p>
                   )}
 
-                  <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap line-clamp-4">
-                    {post.caption}
-                  </p>
+                  {captionWithoutHook(post.caption, post.hook) && (
+                    <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap line-clamp-4">
+                      {captionWithoutHook(post.caption, post.hook)}
+                    </p>
+                  )}
 
                   {post.cta && (
                     <p className="text-primary-600 font-semibold text-sm mt-2">👉 {post.cta}</p>
@@ -254,10 +290,6 @@ export default function CampaignDetailPage() {
                         <span key={tag} className="text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">#{tag.replace('#', '')}</span>
                       ))}
                     </div>
-                  )}
-
-                  {post.review_notes && (
-                    <p className="text-xs text-gray-400 mt-2 italic">ملاحظات المراجعة: {post.review_notes}</p>
                   )}
 
                   {post.approved && post.scheduled_at && (

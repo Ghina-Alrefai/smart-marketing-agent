@@ -47,13 +47,33 @@ def _build_column_index(header_row: tuple) -> dict[str, int]:
 
 
 def _parse_price(raw) -> float | None:
-    """يستخرج أول رقم من نص مثل «520 USD» أو «١٢٠$»."""
+    """يستخرج أول رقم من نص مثل «520 USD» أو «1,050 USD» أو «١٢٠$».
+
+    الفاصلة التي تفصل ثلاث خانات («1,050») تُعامل كفاصل آلاف، أما الفاصلة
+    التي يليها عدد مختلف من الخانات («12,5») فتُعامل كفاصلة عشرية.
+    """
     if raw is None:
         return None
     if isinstance(raw, (int, float)):
         return float(raw)
-    m = re.search(r"\d+(?:[.,]\d+)?", str(raw).replace("٫", "."))
-    return float(m.group().replace(",", ".")) if m else None
+    text = str(raw).replace("٫", ".").replace("٬", ",")
+    m = re.search(r"\d[\d,.  ]*\d|\d", text)
+    if not m:
+        return None
+    num = re.sub(r"[  ]", "", m.group())
+    # فاصل آلاف: فاصلة يتبعها ثلاث خانات ثم نهاية/فاصل آخر
+    if re.fullmatch(r"\d{1,3}(?:,\d{3})+(?:\.\d+)?", num):
+        num = num.replace(",", "")
+    else:
+        num = num.replace(",", ".")
+    # نُبقي أول فاصلة عشرية فقط
+    if num.count(".") > 1:
+        head, _, tail = num.partition(".")
+        num = head + "." + tail.replace(".", "")
+    try:
+        return float(num)
+    except ValueError:
+        return None
 
 
 def _parse_category(raw) -> str | None:

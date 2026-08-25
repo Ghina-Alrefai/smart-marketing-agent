@@ -17,14 +17,26 @@ from monitoring.usage_tracker import track_llm_call
 _CLIENT = None
 
 
+# كل تصاميم فيسبوك مربعة 1024×1024 — نثبّت النسبة على مستوى الطلب لا الوصف.
+IMAGE_ASPECT_RATIO = "1:1"
+TARGET_IMAGE_SIZE = 1024
+
+
+SQUARE_FORMAT_RULE = (
+    "Compose for a perfect square 1:1 canvas (1024x1024 pixels) suitable for a "
+    "Facebook feed post. Keep the hero subject fully inside the square frame "
+    "with balanced margins; never crop the product at the edges."
+)
+
+
 CALM_COMPOSITION_RULES = """
 Create a calm, premium, minimalist composition with one clear hero subject.
 Use generous negative space, balanced visual hierarchy, soft controlled lighting,
 and no more than three harmonious dominant colors. Keep supporting props minimal.
 Output exactly one coherent scene in one frame. Never create a contact sheet,
 3x3 grid, multi-panel layout, storyboard, before/after split, carousel slide grid,
-or multiple design alternatives inside the image. For Carousel content generate
-only one clean cover image; for Reel content generate only one clean thumbnail.
+or multiple design alternatives inside the image. Always produce exactly one
+single static image - never a video frame sequence, animation, or slide set.
 Do not add floating specification cards, UI panels, arrows, charts, badges,
 stickers, decorative particles, excessive glow, repeated devices, or dense
 infographic elements. Do not render text, letters, numbers, captions, slogans,
@@ -42,6 +54,18 @@ the external template.
 """.strip()
 
 
+# يُطبَّق دائماً: الشعار والهوية يأتيان من القالب المرفوع فقط، لا من النموذج.
+NO_INVENTED_BRANDING_RULES = """
+Never invent, design, draw, or imitate any logo, wordmark, monogram, emblem,
+brand name, or trademark. Do not add a header, footer, border, frame, badge,
+contact bar, or social-media chrome. The only branding comes from the brand
+template that the application composites afterwards. Any logo visible on the
+physical product itself must stay exactly as it really is - never redraw,
+restyle, or duplicate it elsewhere in the scene. Focus entirely on presenting
+the product itself as the hero of a clean commercial photograph.
+""".strip()
+
+
 def _guarded_prompt(
     prompt: str,
     style_notes: str,
@@ -51,7 +75,9 @@ def _guarded_prompt(
     parts = [prompt.strip()]
     if style_notes.strip():
         parts.append(f"Style direction: {style_notes.strip()}")
+    parts.append(SQUARE_FORMAT_RULE)
     parts.append(CALM_COMPOSITION_RULES)
+    parts.append(NO_INVENTED_BRANDING_RULES)
     if template_applied_externally:
         parts.append(EXTERNAL_TEMPLATE_RULES)
     return "\n\n".join(parts)
@@ -84,6 +110,48 @@ def _save_image_bytes(image_bytes: bytes, mime: str) -> str:
     return url
 
 
+def _image_config(types):
+    """إعداد التوليد مع تثبيت النسبة المربعة إن كان إصدار المكتبة يدعمها."""
+    kwargs = {"response_modalities": ["IMAGE", "TEXT"]}
+    try:
+        image_config = types.ImageConfig(aspect_ratio=IMAGE_ASPECT_RATIO)
+    except (AttributeError, TypeError, ValueError):
+        # إصدار أقدم لا يدعم ImageConfig: تبقى القاعدة النصية في البرومبت.
+        return types.GenerateContentConfig(**kwargs)
+    try:
+        return types.GenerateContentConfig(image_config=image_config, **kwargs)
+    except (TypeError, ValueError):
+        return types.GenerateContentConfig(**kwargs)
+
+
+def _enforce_square(image_bytes: bytes) -> bytes:
+    """يضمن ناتجاً مربعاً 1024×1024 حتى لو تجاهل النموذج النسبة المطلوبة."""
+    try:
+        import io as _io
+
+        from PIL import Image
+    except ImportError:
+        return image_bytes
+    try:
+        with Image.open(_io.BytesIO(image_bytes)) as im:
+            im = im.convert("RGB")
+            if im.size == (TARGET_IMAGE_SIZE, TARGET_IMAGE_SIZE):
+                return image_bytes
+            # قصّ مركزي إلى مربع ثم تحجيم — يحافظ على البطل في الوسط.
+            side = min(im.size)
+            left = (im.width - side) // 2
+            top = (im.height - side) // 2
+            im = im.crop((left, top, left + side, top + side))
+            im = im.resize((TARGET_IMAGE_SIZE, TARGET_IMAGE_SIZE), Image.LANCZOS)
+            out = _io.BytesIO()
+            im.save(out, format="JPEG", quality=92)
+            print(f"[ImageGen] Normalized to {TARGET_IMAGE_SIZE}x{TARGET_IMAGE_SIZE}")
+            return out.getvalue()
+    except Exception as exc:  # noqa: BLE001
+        print(f"[ImageGen] Square normalization skipped: {exc}")
+        return image_bytes
+
+
 def _extract_image_from_response(response) -> str:
     for part in response.candidates[0].content.parts:
         if not part.inline_data:
@@ -93,7 +161,8 @@ def _extract_image_from_response(response) -> str:
             continue
         raw = part.inline_data.data
         image_bytes = raw if isinstance(raw, bytes) else base64.b64decode(raw)
-        return _save_image_bytes(image_bytes, mime)
+        image_bytes = _enforce_square(image_bytes)
+        return _save_image_bytes(image_bytes, "image/jpeg")
     print("[ImageGen] No image part in response")
     return ""
 
@@ -120,9 +189,7 @@ def generate_image(
             response = _client().models.generate_content(
                 model=settings.GEMINI_IMAGE_MODEL,
                 contents=full_prompt,
-                config=types.GenerateContentConfig(
-                    response_modalities=["IMAGE", "TEXT"]
-                ),
+                config=_image_config(types),
             )
             meta = getattr(response, "usage_metadata", None)
             usage.set_tokens(
@@ -196,9 +263,7 @@ def generate_image_with_product(
             response = _client().models.generate_content(
                 model=settings.GEMINI_IMAGE_MODEL,
                 contents=contents,
-                config=types.GenerateContentConfig(
-                    response_modalities=["IMAGE", "TEXT"]
-                ),
+                config=_image_config(types),
             )
             meta = getattr(response, "usage_metadata", None)
             usage.set_tokens(

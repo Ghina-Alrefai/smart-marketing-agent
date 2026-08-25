@@ -104,7 +104,7 @@ def _stub_strategy(days: int, products: list[dict], goals: list[str]) -> dict:
         "target_audience": "(تجريبي) الجمهور المستهدف",
         "main_message": "(تجريبي) الرسالة المحورية",
         "content_pillars": ["ميزات المنتج", "قيمة للعميل"],
-        "recommended_content_types": ["Single Image", "Carousel"],
+        "recommended_content_types": ["Single Image"],
         "recommended_post_count": min(max(len(products), 1), days),
         "product_distribution": [{"product_id": p["id"], "posts": 1} for p in products],
         "kpis": ["الوصول", "التفاعل"],
@@ -324,7 +324,14 @@ def run_campaign_pipeline(
             prev_visual_concepts: list[
                 str
             ] = []  # يُمرَّر كسياق سلبي لتجنّب تكرار التكوين البصري
+            total_ideas = len(idea_posts)
             for i, idea_post in enumerate(idea_posts, 1):
+                # تقدّم فرعي داخل أطول مرحلة، ليرى المستخدم حركة فعلية
+                emit(
+                    f"🧠✍️🎨 توليد المنشور {i} من {total_ideas}...",
+                    5,
+                    6,
+                )
                 try:
                     post_obj = _build_one_post(
                         i,

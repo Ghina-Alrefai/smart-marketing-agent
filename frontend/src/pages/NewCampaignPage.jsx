@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
-import { Sparkles, CalendarDays, Package, Check } from 'lucide-react'
+import { Sparkles, CalendarDays, Package, Check, Building2, AlertTriangle } from 'lucide-react'
 import useStore from '../store'
 import { apiErrorMessage, createPlan, triggerGeneration, listBrands, listProducts, listEvents } from '../api/client'
 
@@ -49,9 +49,11 @@ export default function NewCampaignPage() {
     enabled: !!user?.id,
   })
 
+  // كل مستخدم مرتبط ببراند واحد، فلا داعي لاختياره — نأخذه تلقائياً.
+  const brand = brands[0] || null
+
   const [form, setForm] = useState({
     campaign_name: '',
-    brand_id: '',
     days: 7,
     start_date: todayISO(),
     campaign_goals: [],
@@ -84,8 +86,10 @@ export default function NewCampaignPage() {
   const mutation = useMutation({
     mutationFn: async (data) => {
       if (!user?.id) throw new Error('لا توجد جلسة مستخدم صالحة')
+      if (!brand?.id) throw new Error('لا يوجد براند مرتبط بحسابك. أضيفي بيانات البراند أولاً.')
       const payload = {
         ...data,
+        brand_id: brand.id,
         // نبقي campaign_goal للتوافق الخلفي (أول هدف)
         campaign_goal: data.campaign_goals[0] || '',
       }
@@ -101,25 +105,31 @@ export default function NewCampaignPage() {
     onError: (error) => toast.error(apiErrorMessage(error, 'تعذّر إنشاء الحملة'), { duration: 8000 }),
   })
 
-  const canSubmit = form.brand_id && form.campaign_goals.length > 0 && form.product_ids.length > 0 && !mutation.isPending
+  const canSubmit = !!brand?.id && form.campaign_goals.length > 0 && form.product_ids.length > 0 && !mutation.isPending
 
   return (
     <div className="p-8 max-w-2xl mx-auto">
       <h1 className="text-2xl font-bold text-gray-900 mb-1">حملة جديدة</h1>
-      <p className="text-gray-500 mb-8">أخبرنا عن حملتك وسيتولى الذكاء الاصطناعي الباقي</p>
+      <p className="text-gray-500 mb-4">أخبرنا عن حملتك وسيتولى الذكاء الاصطناعي الباقي</p>
+
+      {/* البراند يُحدَّد تلقائياً من حساب المستخدم */}
+      {brand ? (
+        <div className="mb-6 flex items-center gap-2 text-sm text-gray-600 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2">
+          <Building2 size={15} className="text-primary-600 flex-shrink-0" />
+          <span>البراند:</span>
+          <span className="font-semibold text-gray-900">{brand.brand_name}</span>
+        </div>
+      ) : (
+        <div className="mb-6 flex items-start gap-2 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5">
+          <AlertTriangle size={15} className="text-amber-600 flex-shrink-0 mt-0.5" />
+          <span>لا يوجد براند مرتبط بحسابك. أضيفي بيانات البراند أولاً من صفحة البراند لتتمكّني من إنشاء حملة.</span>
+        </div>
+      )}
 
       <div className="card space-y-6">
         <div>
           <label className="label">اسم الحملة</label>
           <input className="input" value={form.campaign_name} onChange={e => setForm(f => ({ ...f, campaign_name: e.target.value }))} placeholder="مثال: حملة رمضان 2026" />
-        </div>
-
-        <div>
-          <label className="label">البراند *</label>
-          <select className="input" value={form.brand_id} onChange={e => setForm(f => ({ ...f, brand_id: e.target.value ? Number(e.target.value) : '' }))}>
-            <option value="">اختر البراند</option>
-            {brands.map(b => <option key={b.id} value={b.id}>{b.brand_name}</option>)}
-          </select>
         </div>
 
         <div className="grid grid-cols-2 gap-4">

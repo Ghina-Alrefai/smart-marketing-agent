@@ -60,15 +60,42 @@
     "common_color_families": [
       "gray",
       "cyan",
-      "blue",
       "white",
+      "blue",
       "black",
       "teal",
       "orange",
       "yellow"
     ],
-    "human_presence_rate": 0.44
+    "human_presence_rate": 0.44,
+    "brand_colors": [
+      "#d3d2d8",
+      "#95d7dd",
+      "#FFFFFF"
+    ],
+    "brand_palette": [
+      {
+        "hex": "#d3d2d8",
+        "name": "رمادي فاتح",
+        "family": "gray",
+        "role": "primary"
+      },
+      {
+        "hex": "#95d7dd",
+        "name": "سماوي",
+        "family": "cyan",
+        "role": "accent"
+      },
+      {
+        "hex": "#FFFFFF",
+        "name": "أبيض",
+        "family": "white",
+        "role": "background"
+      }
+    ],
+    "color_policy": "لوحة ثابتة معتمدة يدوياً. تُستخدم هذه الألوان الثلاثة حصراً في كل التصاميم؛ الأبيض للخلفية، الرمادي الفاتح أساسي، والسماوي لوني مميّز. لا تُستبدل بالعائلات المستخرجة إحصائياً.",
+    "palette_locked": true
   },
   "separation_rule": "This profile contains stable identity statistics only. Performance-derived evidence and policies belong to Adaptive Memory.",
-  "brand_profile_version": "sha256:8d6d6c4db8e6deb4"
+  "brand_profile_version": "sha256:92ec8a336a3c1b98"
 }
