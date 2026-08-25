@@ -426,8 +426,13 @@ def run_campaign_pipeline(
 
         except Exception as exc:
             detail = str(exc).strip() or "حدث خطأ غير معروف أثناء التوليد."
+            from services.llm_service import provider_error_message
+
+            friendly = provider_error_message(exc)
             visible_error = (
-                f"فشل عند مرحلة «{current_stage}»: {type(exc).__name__}: {detail}"
+                f"فشل عند مرحلة «{current_stage}»: {friendly}"
+                if friendly
+                else f"فشل عند مرحلة «{current_stage}»: {type(exc).__name__}: {detail}"
             )
             logger.exception(
                 "campaign.generation_failed plan_id=%s stage=%s error_type=%s error=%s",

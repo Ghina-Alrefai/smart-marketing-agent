@@ -92,8 +92,53 @@ def _parse_json_object(raw: str | None) -> dict[str, Any]:
     return payload
 
 
+# رصيد منتهٍ أو مفتاح غير صالح: إعادة المحاولة لا تُجدي أبداً، فنفشل فوراً
+# بدل إضاعة ~50 ثانية في انتظارات لا طائل منها.
+_PERMANENT_MARKERS = (
+    "prepayment credits are depleted",
+    "billing",
+    "quota exceeded",
+    "exceeded your current quota",
+    "api key not valid",
+    "api_key_invalid",
+    "permission_denied",
+    "consumer_suspended",
+)
+
+
+def is_permanent_provider_error(exc: Exception) -> bool:
+    """خطأ من المزوّد لا تُصلحه إعادة المحاولة (رصيد/فوترة/مفتاح)."""
+    message = str(exc).lower()
+    return any(marker in message for marker in _PERMANENT_MARKERS)
+
+
+def provider_error_message(exc: Exception) -> str | None:
+    """رسالة عربية واضحة للمستخدم بدل نص الاستثناء الخام."""
+    message = str(exc).lower()
+    if "prepayment credits are depleted" in message or "billing" in message:
+        return (
+            "نفد رصيد Google Gemini المدفوع مسبقاً. جدّدي الرصيد من "
+            "https://ai.studio/projects ثم أعيدي المحاولة."
+        )
+    if "quota exceeded" in message or "exceeded your current quota" in message:
+        return (
+            "تم تجاوز حصّة الاستخدام المسموحة لمفتاح Gemini. انتظري تجديد الحصّة "
+            "أو ارفعي الحدّ من AI Studio."
+        )
+    if "api key not valid" in message or "api_key_invalid" in message:
+        return (
+            "مفتاح GOOGLE_API_KEY غير صالح. تحقّقي منه في ملف .env ثم أعيدي "
+            "تشغيل الخادم (المفتاح يُقرأ مرة واحدة عند الإقلاع)."
+        )
+    if "permission_denied" in message or "consumer_suspended" in message:
+        return "الوصول إلى Gemini مرفوض لهذا المفتاح. تحقّقي من صلاحيات المشروع في AI Studio."
+    return None
+
+
 def _is_transient_error(exc: Exception) -> bool:
     message = str(exc)
+    if is_permanent_provider_error(exc):
+        return False
     return (
         "503" in message
         or "UNAVAILABLE" in message

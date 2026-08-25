@@ -296,6 +296,12 @@ def _handle_message(user_id: int, brand_id: int, message: str,
         result = _execute(session, user_id, brand_id, dry_run)
     except Exception as exc:  # noqa: BLE001
         session.clear_task()
+        # أخطاء المزوّد (رصيد/حصّة/مفتاح) تُعرض برسالة مفهومة بدل النص الخام.
+        from services.llm_service import provider_error_message
+
+        friendly = provider_error_message(exc)
+        if friendly:
+            return _resp(session, "error", f"⚠️ {friendly}")
         return _resp(session, "error", f"حدث خطأ أثناء التنفيذ: {exc}")
 
     intent_done = session.intent
