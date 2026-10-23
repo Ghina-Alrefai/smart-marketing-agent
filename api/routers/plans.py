@@ -44,6 +44,7 @@ from tools.db_tools import (
     get_scheduled_by_post,
 )
 from workflows.campaign_pipeline import run_campaign_pipeline
+from workflows.pipeline_progress import new_pipeline_state
 
 router = APIRouter(prefix="/plans", tags=["plans"])
 logger = logging.getLogger("smartsocial.plans")
@@ -123,6 +124,10 @@ def trigger_generation(
     # Claim the plan in the database before queuing work.  The conditional
     # UPDATE makes two concurrent trigger requests race safely: exactly one
     # changes the state and schedules the pipeline; the other sees rowcount 0.
+    queued_state = new_pipeline_state(
+        status="queued",
+        execution_mode=settings.CAMPAIGN_EXECUTION_MODE,
+    )
     claimed = (
         db.query(ContentPlan)
         .filter(ContentPlan.id == plan_id, ContentPlan.status != "generating")
@@ -131,6 +136,7 @@ def trigger_generation(
                 ContentPlan.status: "generating",
                 ContentPlan.current_stage: "بانتظار بدء التوليد",
                 ContentPlan.error_message: None,
+                ContentPlan.pipeline_state: queued_state,
             },
             synchronize_session=False,
         )
@@ -147,6 +153,7 @@ def trigger_generation(
         plan_id=plan_id,
         status="started",
         message="بدأت الحملة. تابع الحالة عبر GET /plans/{plan_id}",
+        pipeline_state=queued_state,
     )
 
 
@@ -182,6 +189,7 @@ def generation_status(
         message=plan.error_message if plan.status == "failed" else None,
         current_stage=plan.current_stage,
         error_message=plan.error_message,
+        pipeline_state=plan.pipeline_state or {},
     )
 
 
@@ -249,6 +257,10 @@ def regenerate_failed_plan(
         plan.status = "generating"
         plan.current_stage = "بانتظار إعادة التوليد"
         plan.error_message = None
+        plan.pipeline_state = new_pipeline_state(
+            status="queued",
+            execution_mode=settings.CAMPAIGN_EXECUTION_MODE,
+        )
         db.commit()
     except Exception:
         db.rollback()
@@ -267,6 +279,7 @@ def regenerate_failed_plan(
         posts_generated=0,
         current_stage=plan.current_stage,
         message="تم تنظيف المحاولة الفاشلة وبدأت إعادة توليد الحملة.",
+        pipeline_state=plan.pipeline_state or {},
     )
 
 

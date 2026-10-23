@@ -138,6 +138,10 @@ class ContentPlan(Base):
     status = Column(String(50), default="pending")
     current_stage = Column(String(200), nullable=True)  # آخر مرحلة وصل إليها التوليد
     error_message = Column(Text, nullable=True)  # سبب فشل المهمة الخلفية للمستخدم
+    # Snapshot of the observable agent pipeline.  It is intentionally stored on
+    # the plan so a refresh, another API worker, or a reconnect can resume the
+    # exact same progress view without relying on process-local memory.
+    pipeline_state = Column(JSON, default=dict)
     created_at = Column(DateTime, default=utcnow_naive)
 
     brand = relationship("Brand", back_populates="content_plans")

@@ -1,4 +1,12 @@
-# SmartSocial AI — النسخة المدمجة المستقرة (v1.3.2)
+# SmartSocial AI — النسخة المدمجة المستقرة (v1.4.1)
+
+> توثيق واجهة تتبع الوكلاء أثناء إنشاء الحملة: [`docs/CAMPAIGN_PIPELINE_UI.md`](docs/CAMPAIGN_PIPELINE_UI.md)
+
+> **وضع العرض الحالي:** يعمل إنشاء الحملات افتراضياً عبر `offline_demo` دون
+> أي استدعاء Gemini. تعرض الواجهة شارة واضحة، تحرّك تسلسل الوكلاء، ثم تحمل
+> سبعة منشورات براق محضّرة مسبقاً للمراجعة البشرية. راجع
+> [`docs/OFFLINE_DEMO_MODE_AR.md`](docs/OFFLINE_DEMO_MODE_AR.md) للتشغيل والعودة
+> إلى الوضع الحقيقي.
 
 نسخة متكاملة من مشروع الفريق مع **Stable Brand DNA v1.1.0** و**Adaptive Memory**، مع الحفاظ على الـworkflow المتفق عليه:
 
@@ -82,6 +90,8 @@ python scripts/preload_models.py
 | المتغير | الغرض | الافتراضي |
 |---|---|---|
 | `GOOGLE_API_KEY` | Gemini للنص والصورة | مطلوب للتوليد الحقيقي |
+| `CAMPAIGN_EXECUTION_MODE` | `offline_demo` لعرض ثابت بلا API، أو `live` للتوليد الحقيقي | `offline_demo` |
+| `CAMPAIGN_DEMO_STEP_DELAY_SECONDS` | مدة ظهور كل عقدة نشطة في وضع العرض | `0.85` |
 | `HF_TOKEN` | اختياري لرفع حدود تنزيل نماذج Hugging Face العامة | فارغ |
 | `GOOGLE_CLIENT_ID` | التحقق الخلفي من Google ID Token | مطلوب لدخول Google |
 | `VITE_GOOGLE_CLIENT_ID` | إظهار زر Google في React؛ يجب أن يطابق القيمة السابقة | مطلوب لدخول Google |

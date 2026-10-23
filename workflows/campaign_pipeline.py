@@ -28,6 +28,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 
+from config import settings
 from database.models import ContentPlan
 from database.session import SessionLocal
 from monitoring.usage_tracker import agent_context, trace_context
@@ -38,6 +39,7 @@ from tools.db_tools import (
     save_plan_campaign_data,
     update_plan_generation_state,
 )
+from workflows.pipeline_progress import CampaignPipelineProgress
 
 ProgressCallback = Callable[[str, int, int], None]
 logger = logging.getLogger("smartsocial.campaign")
@@ -140,7 +142,17 @@ def run_campaign_pipeline(
     on_progress: ProgressCallback | None = None,
     dry_run: bool = False,
 ) -> CampaignResult:
+    if settings.CAMPAIGN_EXECUTION_MODE == "offline_demo" and not dry_run:
+        # This branch is deliberately before every agent/model import. It is
+        # therefore impossible for campaign creation in demo mode to consume a
+        # Gemini request or generate an image in the background.
+        from workflows.offline_demo_campaign import run_offline_demo_campaign
+
+        demo = run_offline_demo_campaign(plan_id, on_progress=on_progress)
+        return CampaignResult(**demo)
+
     current_stage = "تهيئة التوليد"
+    tracker: CampaignPipelineProgress | None = None
 
     def emit(msg: str, cur: int = 0, total: int = 0) -> None:
         nonlocal current_stage
@@ -178,6 +190,8 @@ def run_campaign_pipeline(
             start_date=plan.start_date,
         )
 
+    tracker = CampaignPipelineProgress(plan_id)
+
     update_plan_generation_state(
         plan_id,
         status="generating",
@@ -189,40 +203,61 @@ def run_campaign_pipeline(
     # حملة واحدة = Trace واحد لربط استهلاك كل الوكلاء والتكلفة بالخطة.
     with trace_context(user_id=cfg.user_id, content_plan_id=plan_id):
         try:
+            # ── 0. Orchestrator → validate and route the campaign ───────────────
+            tracker.activate(
+                "orchestrator",
+                "يتحقق من إعدادات الحملة والمنتجات ثم يجهّز سياقاً موحّداً للوكلاء.",
+                current_stage="⚙️ تجهيز مدخلات الحملة والتحقق منها...",
+            )
+            basic_products = get_products(cfg.user_id, cfg.product_ids or None)
+            if not basic_products:
+                raise RuntimeError("لا توجد منتجات مختارة للحملة.")
+            tracker.complete(
+                "orchestrator",
+                f"اكتملت التهيئة وتم تمرير {len(basic_products)} منتج إلى وكيل الهوية.",
+                metadata={"product_count": len(basic_products)},
+            )
+
             # ── 1. Brand Agent → Brand Guide ─────────────────────────────────────
             emit("🏷️ تحليل هوية البراند...", 1, 6)
+            tracker.activate(
+                "brand",
+                "يقرأ Brand DNA والنبرة والألوان والكلمات والقواعد الثابتة لبناء دليل الهوية.",
+                current_stage=current_stage,
+            )
             from agents.brand.brand_agent import analyze_brand
 
             with agent_context("brand_agent"):
                 analyze_out = analyze_brand(cfg.brand_id)
             if "error" in analyze_out:
-                message = str(analyze_out["error"])
-                logger.error(
-                    "campaign.brand_analysis_failed plan_id=%s error=%s",
-                    plan_id,
-                    message,
-                )
-                update_plan_generation_state(
-                    plan_id, status="failed", error_message=message
-                )
-                return CampaignResult(False, plan_id, errors=[message])
+                raise RuntimeError(str(analyze_out["error"]))
             brand_guide = _build_brand_guide(analyze_out)
             guidelines_str = json.dumps(
                 brand_guide.get("guidelines", {}), ensure_ascii=False
             )
 
-            # قائمة منتجات أساسية للاستراتيجية
-            basic_products = get_products(cfg.user_id, cfg.product_ids or None)
-            if not basic_products:
-                message = "لا توجد منتجات مختارة للحملة."
-                logger.error("campaign.products_missing plan_id=%s", plan_id)
-                update_plan_generation_state(
-                    plan_id, status="failed", error_message=message
-                )
-                return CampaignResult(False, plan_id, errors=[message])
+            tracker.complete(
+                "brand",
+                "دليل الهوية جاهز ومقيّد بقواعد Brand DNA النشطة.",
+                metadata={
+                    "prediction_available": bool(
+                        (analyze_out.get("_intelligence") or {}).get(
+                            "prediction_available"
+                        )
+                    ),
+                    "profile_version": (
+                        analyze_out.get("_intelligence") or {}
+                    ).get("profile_version"),
+                },
+            )
 
             # ── 2. Strategy Agent → استراتيجية كلّية ────────────────────────────
             emit("📋 بناء استراتيجية الحملة...", 2, 6)
+            tracker.activate(
+                "strategy",
+                "يحدد الهدف والجمهور وركائز المحتوى وتوزيع المنتجات على الحملة.",
+                current_stage=current_stage,
+            )
             if dry_run:
                 strategy = _stub_strategy(cfg.days, basic_products, cfg.goals)
             else:
@@ -247,9 +282,24 @@ def run_campaign_pipeline(
                 or not strategy["content_pillars"]
             ):
                 raise RuntimeError("استراتيجية الحملة لا تحتوي ركائز محتوى صالحة.")
+            tracker.complete(
+                "strategy",
+                "الاستراتيجية جاهزة وتم تمرير الركائز والرسالة المحورية إلى وكيل المنتجات.",
+                metadata={
+                    "pillar_count": len(strategy.get("content_pillars") or []),
+                    "recommended_post_count": strategy.get(
+                        "recommended_post_count"
+                    ),
+                },
+            )
 
             # ── 3. Product Agent → سياق المنتجات ────────────────────────────────
             emit("📦 تجهيز سياق المنتجات...", 3, 6)
+            tracker.activate(
+                "products",
+                "يجمع المواصفات والصور والسعر والفئة لكل منتج كي لا يختلق الوكلاء معلومات.",
+                current_stage=current_stage,
+            )
             if dry_run:
                 products_ctx = [
                     {
@@ -277,9 +327,19 @@ def run_campaign_pipeline(
             if not isinstance(products_ctx, list) or not products_ctx:
                 raise RuntimeError("لم يتمكن وكيل المنتجات من تجهيز أي منتج للحملة.")
             product_by_id = {p["id"]: p for p in products_ctx}
+            tracker.complete(
+                "products",
+                f"تم تجهيز سياق {len(products_ctx)} منتج وإرساله إلى وكيل الأفكار.",
+                metadata={"product_count": len(products_ctx)},
+            )
 
             # ── 4. Idea Agent → أفكار قانونية (post_id + idea) ──────────────────
             emit("💡 توليد أفكار المنشورات...", 4, 6)
+            tracker.activate(
+                "ideas",
+                "يبتكر زاوية ورسالة واتجاهاً بصرياً مختلفاً لكل منشور ويمنع التكرار.",
+                current_stage=current_stage,
+            )
             try:
                 post_count = int(
                     strategy.get("recommended_post_count")
@@ -317,6 +377,12 @@ def run_campaign_pipeline(
                     f"({post_count})."
                 )
             total = len(idea_posts)
+            tracker.set_total_posts(total)
+            tracker.complete(
+                "ideas",
+                f"جهّز {total} أفكار مترابطة ومرّرها إلى حلقة إنتاج المنشورات.",
+                metadata={"post_count": total},
+            )
 
             # ── 5. لكل بوست: 3 مرشحين → تقييم → تصميم → مراجعة بشرية ────────────
             emit("🧠✍️🎨 توليد المرشحين وتقييمهم وتصميمهم...", 5, 6)
@@ -342,13 +408,22 @@ def run_campaign_pipeline(
                         plan_id,
                         dry_run,
                         prev_visual_concepts,
+                        progress_tracker=tracker,
+                        total_posts=total_ideas,
                     )
                     campaign_posts.append(post_obj)
+                    tracker.post_saved(len(campaign_posts), total_ideas)
                     vc = (post_obj.get("design") or {}).get("visual_concept", "")
                     if vc:
                         prev_visual_concepts.append(vc)
                 except Exception as exc:
                     errors.append(f"{idea_post.get('post_id', i)} failed: {exc}")
+                    tracker.item_failed(
+                        tracker.active_node or "quality",
+                        i,
+                        total_ideas,
+                        str(exc),
+                    )
                     logger.exception(
                         "campaign.post_generation_failed plan_id=%s post_id=%s error_type=%s",
                         plan_id,
@@ -365,6 +440,11 @@ def run_campaign_pipeline(
 
             # ── 6. كائن الحملة الموحّد + حفظ ────────────────────────────────────
             emit("🧩 تجميع كائن الحملة...", 6, 6)
+            tracker.activate(
+                "assembler",
+                "يربط الاستراتيجية والمنتجات والأفكار والنصوص والتصاميم في كائن حملة واحد قابل للتتبع.",
+                current_stage=current_stage,
+            )
             campaign = {
                 "strategy": strategy,
                 "products": products_ctx,
@@ -394,6 +474,11 @@ def run_campaign_pipeline(
                 campaign_data={"campaign": campaign},
                 intelligence_summary=intelligence_summary,
             )
+            tracker.complete(
+                "assembler",
+                f"تم تجميع الحملة وحفظ {len(campaign_posts)} منشور للمراجعة.",
+                metadata={"posts_generated": len(campaign_posts)},
+            )
 
             # ── 7. البوستات المعتمدة فقط → Schedule Agent ───────────────────────
             # المراجعة تُعيد null (غير معتمدة) → لا جدولة تلقائية هنا؛
@@ -405,10 +490,10 @@ def run_campaign_pipeline(
                 if not errors and len(campaign_posts) == total
                 else "done_with_errors"
             )
-            update_plan_generation_state(
-                plan_id,
-                status=final_status,
-                error_message=" | ".join(errors) if errors else None,
+            tracker.finish(
+                posts_generated=len(campaign_posts),
+                total_posts=total,
+                errors=errors,
             )
             completion_message = (
                 "✅ اكتملت الحملة!"
@@ -441,12 +526,15 @@ def run_campaign_pipeline(
                 type(exc).__name__,
                 detail[:2000],
             )
-            update_plan_generation_state(
-                plan_id,
-                status="failed",
-                current_stage=current_stage,
-                error_message=visible_error,
-            )
+            if tracker:
+                tracker.fail(visible_error, current_stage=current_stage)
+            else:
+                update_plan_generation_state(
+                    plan_id,
+                    status="failed",
+                    current_stage=current_stage,
+                    error_message=visible_error,
+                )
             return CampaignResult(False, plan_id, errors=[visible_error])
 
 
@@ -460,6 +548,9 @@ def _build_one_post(
     plan_id: int,
     dry_run: bool,
     prev_visual_concepts: list[str] | None = None,
+    *,
+    progress_tracker: CampaignPipelineProgress | None = None,
+    total_posts: int = 0,
 ) -> dict:
     post_id = idea_post["post_id"]
     raw_product_id = idea_post.get("product_id")
@@ -469,6 +560,31 @@ def _build_one_post(
         product_id = None
     product = product_by_id.get(product_id, {})
     from services.campaign_intelligence import generate_evaluated_post
+
+    def report_progress(
+        node_key: str,
+        event: str,
+        activity: str,
+        metadata: dict,
+    ) -> None:
+        if not progress_tracker:
+            return
+        if event == "active":
+            progress_tracker.activate(
+                node_key,
+                activity,
+                post_index=index,
+                total_posts=total_posts,
+                metadata=metadata,
+            )
+        elif event == "item_complete":
+            progress_tracker.item_complete(
+                node_key,
+                index,
+                total_posts,
+                activity,
+                metadata=metadata,
+            )
 
     with agent_context("campaign_intelligence"):
         evaluated = generate_evaluated_post(
@@ -480,6 +596,7 @@ def _build_one_post(
             campaign_goals=cfg.goals,
             start_date=cfg.start_date,
             dry_run=dry_run,
+            progress_reporter=report_progress,
         )
     content = evaluated["content"]
     design = evaluated["design"]

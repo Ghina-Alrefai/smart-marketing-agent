@@ -42,7 +42,7 @@ _MIGRATIONS: dict[str, dict[str, str]] = {
         "include_trends": "BOOLEAN DEFAULT 0", "selected_trends": "JSON",
         "mode": "VARCHAR(20) DEFAULT 'campaign'", "strategy": "JSON", "campaign_data": "JSON",
         "intelligence_summary": "JSON", "current_stage": "VARCHAR(200)",
-        "error_message": "TEXT",
+        "error_message": "TEXT", "pipeline_state": "JSON",
     },
     "brands": {
         "dna_status": "VARCHAR(30) DEFAULT 'uninitialized'",

@@ -8,7 +8,9 @@ repair, one recommended candidate, design, and a final evaluation trace.
 from __future__ import annotations
 
 import hashlib
+import logging
 import re
+from collections.abc import Callable
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -23,6 +25,9 @@ from services.brand_intelligence_service import (
 )
 from tools.image_generation import generate_image, generate_image_with_product
 from tools.template_overlay import apply_brand_template
+
+logger = logging.getLogger("smartsocial.campaign_intelligence")
+ProgressReporter = Callable[[str, str, str, dict[str, Any]], None]
 
 
 ARABIC_DAYS = [
@@ -252,8 +257,26 @@ def generate_evaluated_post(
     start_date: datetime | None,
     dry_run: bool = False,
     include_design: bool = True,
+    progress_reporter: ProgressReporter | None = None,
 ) -> dict[str, Any]:
     """Return content/design plus a complete, reproducible intelligence trace."""
+    def report(
+        node_key: str,
+        event: str,
+        activity: str,
+        **metadata: Any,
+    ) -> None:
+        if not progress_reporter:
+            return
+        try:
+            progress_reporter(node_key, event, activity, metadata)
+        except Exception:  # Progress UI must never make campaign output fail.
+            logger.exception(
+                "campaign.progress_report_failed node=%s event=%s",
+                node_key,
+                event,
+            )
+
     context = get_brand_context(brand_id)
     if "error" in context:
         raise ValueError(context["error"])
@@ -269,6 +292,11 @@ def generate_evaluated_post(
         start_date=start_date,
     )
 
+    report(
+        "copywriter",
+        "active",
+        "يكتب ثلاثة مرشحين مختلفين للنص مع تطبيق نبرة البراند وسياسات الذاكرة.",
+    )
     if dry_run:
         generation = _dry_generation(brief, profile, scoring_mode)
     else:
@@ -284,7 +312,20 @@ def generate_evaluated_post(
         )
     if not generation.get("candidates"):
         raise RuntimeError("No valid candidate survived validation; inspect generation attempt_history.")
+    report(
+        "copywriter",
+        "item_complete",
+        f"أنشأ {len(generation.get('candidates') or [])} مرشحين صالحين للنص.",
+        candidate_count=len(generation.get("candidates") or []),
+        attempt_count=generation.get("attempt_count"),
+    )
 
+    report(
+        "evaluator",
+        "active",
+        "يقارن المرشحين بقواعد Brand DNA ويختار الأعلى توافقاً وجودة.",
+        scoring_mode=scoring_mode,
+    )
     recommended = generation["candidates"][0]
     selected = dict(recommended.get("candidate") or {})
     caption = selected.get("caption", "")
@@ -298,6 +339,24 @@ def generate_evaluated_post(
         "cta": cta,
         "hashtags": _hashtags(caption, int(selected.get("number_of_hashtags") or 0)),
     }
+    report(
+        "evaluator",
+        "item_complete",
+        "اختار المرشح الأقوى ووثّق سبب الترتيب.",
+        selected_candidate_id=selected.get("id"),
+        predesign_score=recommended.get("predicted_success_probability"),
+        cold_start_score=recommended.get("cold_start_quality_score_0_1"),
+    )
+
+    report(
+        "designer",
+        "active",
+        (
+            "يبني التصميم من الفكرة المختارة مع الالتزام بالألوان والقالب وهدوء الهوية البصرية."
+            if include_design
+            else "يتحقق من أن هذا المسار لا يحتاج تصميماً."
+        ),
+    )
     design = (
         _create_design(
             selected,
@@ -319,7 +378,23 @@ def generate_evaluated_post(
             "design_status": "not_requested",
         }
     )
+    report(
+        "designer",
+        "item_complete",
+        (
+            "أنشأ التصميم وربطه بالنص والمنتج."
+            if include_design and design.get("image")
+            else "أنهى مرحلة التصميم دون صورة جديدة."
+        ),
+        design_status=design.get("design_status"),
+        image_ready=bool(design.get("image")),
+    )
 
+    report(
+        "quality",
+        "active",
+        "يفحص اتساق النص والصورة معاً ويجهّز النتيجة للمراجعة البشرية.",
+    )
     multimodal = None
     image_path = _local_image_path(design.get("image", ""))
     if include_design and scoring_mode == "brand_dna" and image_path and not dry_run:
@@ -362,6 +437,19 @@ def generate_evaluated_post(
     }
     if multimodal:
         generation["multimodal_selected_evaluation"] = multimodal
+
+    report(
+        "quality",
+        "item_complete",
+        (
+            "اجتاز المنشور بوابات الجودة وأصبح جاهزاً لمراجعتك."
+            if passed
+            else "اكتمل الفحص ووُسِم المنشور بأنه يحتاج مراجعة إضافية."
+        ),
+        quality_status=status,
+        multimodal_score=multimodal_score,
+        design_ready=design_ready,
+    )
 
     return {
         "content": content,

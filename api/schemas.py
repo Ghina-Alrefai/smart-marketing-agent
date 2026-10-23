@@ -110,6 +110,7 @@ class ContentPlanOut(ContentPlanCreate):
     strategy: dict[str, Any] = {}
     campaign_data: dict[str, Any] = {}
     intelligence_summary: dict[str, Any] = {}
+    pipeline_state: dict[str, Any] = {}
     model_config = {"from_attributes": True}
 
     @field_validator("campaign_goals", "product_ids", "selected_events", "selected_trends",
@@ -118,7 +119,7 @@ class ContentPlanOut(ContentPlanCreate):
     def _none_to_list(cls, v):   # الصفوف القديمة قد تحمل NULL
         return v or []
 
-    @field_validator("strategy", "campaign_data", "intelligence_summary", mode="before")
+    @field_validator("strategy", "campaign_data", "intelligence_summary", "pipeline_state", mode="before")
     @classmethod
     def _none_to_plan_dicts(cls, v):
         return v or {}
@@ -166,6 +167,7 @@ class GenerationStatusOut(BaseModel):
     message: str | None = None
     current_stage: str | None = None
     error_message: str | None = None
+    pipeline_state: dict[str, Any] = {}
 
 
 class ScheduledPostOut(BaseModel):

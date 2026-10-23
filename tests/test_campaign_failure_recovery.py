@@ -161,3 +161,6 @@ def test_pipeline_marks_empty_idea_result_as_failed(monkeypatch) -> None:
         stored = db.query(ContentPlan).filter(ContentPlan.id == plan_id).one()
         assert stored.status == "failed"
         assert "لم يولّد وكيل الأفكار أي منشور" in stored.error_message
+        assert stored.pipeline_state["status"] == "failed"
+        nodes = {node["key"]: node for node in stored.pipeline_state["nodes"]}
+        assert nodes["ideas"]["status"] == "failed"

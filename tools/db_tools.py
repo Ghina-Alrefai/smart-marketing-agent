@@ -71,6 +71,7 @@ def update_plan_generation_state(
     current_stage: str | None = None,
     error_message: str | None = None,
     clear_error: bool = False,
+    pipeline_state: dict[str, Any] | None = None,
 ) -> bool:
     """Persist observable state for a campaign running outside the request lifecycle."""
     with _db() as db:
@@ -81,6 +82,8 @@ def update_plan_generation_state(
             plan.status = status
         if current_stage is not None:
             plan.current_stage = current_stage
+        if pipeline_state is not None:
+            plan.pipeline_state = pipeline_state
         if clear_error:
             plan.error_message = None
         elif error_message is not None:

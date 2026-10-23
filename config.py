@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -18,6 +20,12 @@ class Settings(BaseSettings):
     GEMINI_MAX_OUTPUT_TOKENS: int = 16_384
     LLM_JSON_MAX_ATTEMPTS: int = 3
     MAX_UPLOAD_SIZE_MB: int = 10
+
+    # Offline demo is the current safe default: campaign creation never calls
+    # Gemini and instead loads a clearly disclosed, prepared seven-day fixture.
+    # Switch to "live" only when a funded API key is available again.
+    CAMPAIGN_EXECUTION_MODE: Literal["live", "offline_demo"] = "offline_demo"
+    CAMPAIGN_DEMO_STEP_DELAY_SECONDS: float = 0.85
 
     # Brand-DNA + Adaptive Memory integration
     BRAND_DNA_ROOT: str = "."

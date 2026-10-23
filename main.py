@@ -57,7 +57,7 @@ seed_admin()   # يهيّئ حساب المشرف الثابت إن لم يكن 
 app = FastAPI(
     title="AI Marketing OS",
     description="نظام تشغيل تسويقي مبني على الذكاء الاصطناعي",
-    version="1.3.2-campaign-recovery",
+    version="1.4.1-offline-demo",
 )
 
 
@@ -209,6 +209,9 @@ def _preload_brand_dna_runtime() -> None:
 
 @app.on_event("startup")
 async def startup_brand_dna_runtime() -> None:
+    if settings.CAMPAIGN_EXECUTION_MODE == "offline_demo":
+        logger.info("brand_dna.runtime_preload_skipped execution_mode=offline_demo")
+        return
     if not settings.BRAND_DNA_PRELOAD_MODELS:
         logger.info("brand_dna.runtime_preload_disabled")
         return

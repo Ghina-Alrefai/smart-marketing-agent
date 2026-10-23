@@ -55,13 +55,21 @@ export default function CampaignDetailPage() {
   const { data: plan } = useQuery({
     queryKey: ['plan', planId],
     queryFn: () => getPlan(planId).then(r => r.data),
-    refetchInterval: (query) => query.state.data?.status === 'generating' ? 3000 : false,
+    // pipeline_state خفيف أثناء التنفيذ ويعطي انتقالات الوكلاء شبه لحظياً.
+    refetchInterval: (query) => {
+      const currentPlan = query.state.data
+      if (!['pending', 'generating'].includes(currentPlan?.status)) return false
+      return currentPlan?.pipeline_state?.is_demo ? 600 : 1500
+    },
+    refetchIntervalInBackground: true,
   })
 
   const { data: posts = [], isLoading } = useQuery({
     queryKey: ['posts', planId],
     queryFn: () => listPosts(planId).then(r => r.data),
-    refetchInterval: plan?.status === 'generating' ? 4000 : false,
+    refetchInterval: plan?.status === 'generating'
+      ? (plan?.pipeline_state?.is_demo ? 800 : 2500)
+      : false,
   })
 
   const approveMutation = useMutation({
@@ -140,10 +148,11 @@ export default function CampaignDetailPage() {
           </div>
         </div>
 
-        {/* خط أنابيب الوكلاء — يظهر أثناء التوليد وعند الفشل */}
-        {(isGenerating || plan?.status === 'failed') && (
+        {/* غرفة عمليات الوكلاء — تبقى ظاهرة بعد الاكتمال كسجل قابل للتتبّع */}
+        {plan && (
           <div className="mt-5">
             <CampaignPipeline
+              pipeline={plan?.pipeline_state}
               stage={plan?.current_stage}
               status={plan?.status}
               errorMessage={plan?.error_message}
@@ -198,19 +207,8 @@ export default function CampaignDetailPage() {
         </div>
       )}
 
-      {/* Generating placeholder */}
       {isGenerating && posts.length === 0 && (
-        <div className="text-center py-20">
-          <div className="inline-flex flex-col items-center gap-4">
-            <div className="w-16 h-16 bg-primary-50 rounded-full flex items-center justify-center">
-              <Sparkles size={28} className="text-primary-600 animate-pulse" />
-            </div>
-            <div>
-              <p className="font-semibold text-gray-800">الذكاء الاصطناعي يعمل...</p>
-              <p className="text-sm text-gray-400 mt-1">يتم تحليل البراند وبناء الاستراتيجية وكتابة المحتوى</p>
-            </div>
-          </div>
-        </div>
+        <p className="mb-6 text-center text-sm text-gray-400">ستظهر المنشورات هنا تدريجياً بعد حفظ أول نتيجة.</p>
       )}
 
       {/* Posts grid */}
@@ -331,11 +329,3 @@ export default function CampaignDetailPage() {
   )
 }
 
-// Mini icon used in the loading state above
-function Sparkles({ size, className }) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5z"/><path d="M5 3l.5 1.5L7 5l-1.5.5L5 7l-.5-1.5L3 5l1.5-.5z"/><path d="M19 13l.5 1.5L21 15l-1.5.5L19 17l-.5-1.5L17 15l1.5-.5z"/>
-    </svg>
-  )
-}
